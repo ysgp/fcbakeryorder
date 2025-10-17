@@ -1,4 +1,4 @@
-// File: src/components/OrderFormWeb.jsx (已修正 Supabase 欄位名稱)
+// File: src/components/OrderFormWeb.jsx (已修正 Supabase 欄位名稱: name_zh, price)
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'; 
 import { supabase } from '../supabase';
@@ -34,7 +34,8 @@ const OrderFormWeb = () => {
     const itemPriceMap = useMemo(() => {
         // 使用 item.price 來建立價格對應
         return masterItems.reduce((map, item) => {
-            map[item.master_items] = item.price; // <--- 修正: 用 master_items 作為 key
+            // 修正: 用 item.name_zh 作為 key
+            map[item.name_zh] = item.price; 
             return map;
         }, {});
     }, [masterItems]);
@@ -44,10 +45,10 @@ const OrderFormWeb = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('master_items')
-            // 修正: 選擇 master_items (品項名稱) 和 price (價格)
-            .select('master_items, price')
+            // 修正: 選擇 name_zh (品項名稱) 和 price (價格)
+            .select('name_zh, price')
             .eq('is_active', true) 
-            .order('master_items', { ascending: true }); // <--- 修正: 用 master_items 排序
+            .order('name_zh', { ascending: true }); // 修正: 用 name_zh 排序
 
         if (error) {
             console.error('Error fetching master items:', error);
@@ -117,8 +118,8 @@ const OrderFormWeb = () => {
                 suggestionRefs.current[prevIndex].focus();
             } else if (e.key === 'Enter' && currentActiveIndex >= 0) {
                 e.preventDefault();
-                // 修正: 使用 master_items 作為品項名稱
-                handleSelectSuggestion(index, suggestions[currentActiveIndex].master_items); 
+                // 修正: 使用 name_zh 作為品項名稱
+                handleSelectSuggestion(index, suggestions[currentActiveIndex].name_zh); 
             }
         }
     };
@@ -126,8 +127,8 @@ const OrderFormWeb = () => {
     const filteredMasterItems = useMemo(() => {
         if (!searchTerm) return [];
         return masterItems.filter(item => 
-            // 修正: 用 item.master_items 進行過濾
-            item.master_items.toLowerCase().includes(searchTerm.toLowerCase())
+            // 修正: 用 item.name_zh 進行過濾
+            item.name_zh.toLowerCase().includes(searchTerm.toLowerCase())
         ).slice(0, 5); 
     }, [masterItems, searchTerm]);
 
@@ -197,7 +198,6 @@ const OrderFormWeb = () => {
         setTimeout(() => setMessage(''), 5000);
     };
 
-    // ... (樣式代碼保持不變) ...
     // 現代簡潔樣式
     const formStyle = {
         formContainer: {
@@ -430,13 +430,13 @@ const OrderFormWeb = () => {
                                             key={sIndex}
                                             tabIndex={0}
                                             ref={el => suggestionRefs.current[sIndex] = el}
-                                            // 修正: 使用 sItem.master_items 作為品項名稱
-                                            onMouseDown={() => handleSelectSuggestion(index, sItem.master_items)} 
+                                            // 修正: 使用 sItem.name_zh 作為品項名稱
+                                            onMouseDown={() => handleSelectSuggestion(index, sItem.name_zh)} 
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     e.preventDefault();
-                                                    // 修正: 使用 sItem.master_items 作為品項名稱
-                                                    handleSelectSuggestion(index, sItem.master_items);
+                                                    // 修正: 使用 sItem.name_zh 作為品項名稱
+                                                    handleSelectSuggestion(index, sItem.name_zh);
                                                 }
                                             }}
                                             style={{ 
@@ -444,8 +444,8 @@ const OrderFormWeb = () => {
                                                 backgroundColor: sIndex === suggestionRefs.current.findIndex(ref => ref === document.activeElement) ? `${ACCENT_COLOR}30` : BG_SECONDARY,
                                             }}
                                         >
-                                            {/* 修正: 顯示 sItem.master_items 和 sItem.price */}
-                                            {sItem.master_items} (NT${sItem.price}) 
+                                            {/* 修正: 顯示 sItem.name_zh */}
+                                            {sItem.name_zh} (NT${sItem.price}) 
                                         </div>
                                     ))}
                                 </div>

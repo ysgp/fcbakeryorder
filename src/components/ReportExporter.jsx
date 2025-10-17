@@ -158,6 +158,25 @@ const ReportExporter = () => {
     const calculateTotal = (orderItems) => {
         return orderItems.reduce((total, item) => total + item.quantity * item.item_price, 0);
     };
+    
+    // 新增：處理結單邏輯
+    const handleCompleteOrder = async (orderId) => {
+        setMessage('');
+        const { error } = await supabase
+            .from('orders')
+            .update({ is_completed: true })
+            .eq('order_id', orderId);
+
+        if (error) {
+            console.error('Error completing order:', error);
+            setMessage(`結單失敗: ${error.message}`);
+        } else {
+            setMessage(`✅ 訂單 ${orderId} 已成功結單！`);
+            fetchOrders(); 
+        }
+        setTimeout(() => setMessage(''), 5000);
+    };
+
 
     const handleExportSingleOrder = (order) => {
         const total = calculateTotal(order.order_items);
@@ -217,12 +236,12 @@ const ReportExporter = () => {
             "聯絡電話", 
             "總金額", 
             "付款狀態", 
-            "結單狀態",
+            "結單狀態", 
             "取貨時間", 
             "訂單備註", 
             "創建時間"
         ];
-
+        
         // 根據最大商品數添加商品標題
         for (let i = 1; i <= maxProducts; i++) {
             header.push(`品項${i} 名稱`, `品項${i} 數量`);
@@ -253,38 +272,22 @@ const ReportExporter = () => {
                     row.push('', ''); // 填充空白欄位
                 }
             }
+
             data.push(row);
         });
 
         const worksheet = XLSX.utils.aoa_to_sheet(data);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "訂單總覽");
-
+        
         const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
         const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
         saveAs(blob, `Orders_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
-        setMessage(`✅ 共 ${orders.length} 筆訂單導出成功！`);
+        setMessage('✅ 所有訂單數據已成功導出！');
         setTimeout(() => setMessage(''), 5000);
     };
 
-    const handleCompleteOrder = async (orderId) => {
-        if (!window.confirm("確定要將此訂單標記為已結單嗎？")) {
-            return;
-        }
-        
-        const { error } = await supabase
-            .from('orders')
-            .update({ is_completed: true })
-            .eq('order_id', orderId);
-
-        if (error) {
-            setMessage(`錯誤: 結單失敗 - ${error.message}`);
-        } else {
-            setMessage(`✅ 訂單 ${orderId} 已標記為已結單！`);
-            fetchOrders(); // 重新載入數據
-        }
-        setTimeout(() => setMessage(''), 5000);
-    };
+    if (loading) return <div style={{ color: TEXT_COLOR, textAlign: 'center' }}>載入中...</div>;
 
     return (
         <div style={tableStyle.container}>
@@ -295,114 +298,105 @@ const ReportExporter = () => {
                     {message}
                 </div>
             )}
+            
             {error && <div style={tableStyle.messageBox('error')}>{error}</div>}
 
-            <div style={{ padding: '10px', backgroundColor: BG_SECONDARY, borderRadius: '8px', marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
-                    <label style={{ color: TEXT_COLOR, marginRight: '10px' }}>起始日期:</label>
-                    <input
-                        type="date"
-                        value={startDate}
-                        onChange={(e) => setStartDate(e.target.value)}
-                        style={tableStyle.input}
-                    />
-                    <label style={{ color: TEXT_COLOR, marginRight: '10px', marginLeft: '20px' }}>結束日期:</label>
-                    <input
-                        type="date"
-                        value={endDate}
-                        onChange={(e) => setEndDate(e.target.value)}
-                        style={tableStyle.input}
-                    />
-                </div>
+            {/* 篩選與導出區塊 */}
+            <div style={tableStyle.searchContainer}>
+                {/* 日期篩選 */}
+                <span style={{ color: TEXT_COLOR, marginRight: '5px' }}>從：</span>
+                <input
+                    type="date"
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    style={tableStyle.input}
+                />
+                <span style={{ color: TEXT_COLOR, marginRight: '5px' }}>到：</span>
+                <input
+                    type="date"
+                    value={endDate}
+                    onChange={(e) => setEndDate(e.target.value)}
+                    style={tableStyle.input}
+                />
                 
-                <div style={{ display: 'flex', alignItems: 'center' }}>
-                    <label style={{ color: TEXT_COLOR, marginRight: '10px' }}>狀態過濾:</label>
-                    <select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        style={{ ...tableStyle.input, width: '150px', appearance: 'none' }}
-                    >
-                        <option value="all">所有訂單</option>
-                        <option value="pending">待處理</option>
-                        <option value="completed">已結單</option>
-                    </select>
+                {/* 狀態篩選 */}
+                <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    style={tableStyle.input}
+                >
+                    <option value="all">所有狀態</option>
+                    <option value="pending">⏳ 待處理</option>
+                    <option value="completed">✅ 已結單</option>
+                </select>
 
-                    <button
-                        onClick={fetchOrders}
-                        style={{ 
-                            ...tableStyle.button, 
-                            backgroundColor: ACCENT_COLOR, 
-                            color: 'white',
-                            marginLeft: '20px'
-                        }}
-                    >
-                        🔄 篩選/刷新
-                    </button>
-                    
-                    <button
-                        onClick={handleExportAll}
-                        style={{ 
-                            ...tableStyle.button, 
-                            backgroundColor: SUCCESS_COLOR, 
-                            color: 'white'
-                        }}
-                    >
-                        ⬇️ 導出所有結果 ({orders.length})
-                    </button>
-                </div>
+                <button 
+                    onClick={handleExportAll}
+                    style={{ ...tableStyle.button, backgroundColor: ACCENT_COLOR, color: 'white' }}
+                >
+                    導出所有數據 (.xlsx)
+                </button>
+                <button 
+                    onClick={fetchOrders}
+                    style={{ ...tableStyle.button, backgroundColor: BG_PRIMARY, color: ACCENT_COLOR, border: `1px solid ${ACCENT_COLOR}` }}
+                >
+                    重新整理
+                </button>
             </div>
 
-            {loading ? (
-                <div style={{ color: TEXT_COLOR, textAlign: 'center' }}>載入訂單中...</div>
-            ) : orders.length === 0 ? (
-                <div style={{ color: TEXT_COLOR, textAlign: 'center', padding: '20px' }}>
-                    找不到符合條件的訂單。
+            {orders.length === 0 && !loading ? (
+                <div style={{ color: WARNING_COLOR, textAlign: 'center', padding: '30px', fontSize: '18px' }}>
+                    在篩選條件下找不到任何訂單。
                 </div>
             ) : (
-                <div style={{ overflowX: 'auto' }}>
+                <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
                     <table style={tableStyle.table}>
                         <thead>
                             <tr>
                                 <th style={{ ...tableStyle.th, ...tableStyle.tdFirst }}>編號</th>
-                                <th style={tableStyle.th}>客戶</th>
-                                <th style={tableStyle.th}>電話</th>
-                                <th style={tableStyle.th}>品項概覽</th>
-                                <th style={tableStyle.th}>總金額</th>
+                                <th style={tableStyle.th}>客戶/電話</th>
+                                <th style={tableStyle.th}>總額</th>
                                 <th style={tableStyle.th}>狀態</th>
-                                <th style={{ ...tableStyle.th, ...tableStyle.tdLast, width: '200px' }}>操作</th>
+                                <th style={tableStyle.th}>備註</th>
+                                <th style={{ ...tableStyle.th, ...tableStyle.tdLast, width: '220px' }}>操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {orders.map((order) => (
+                            {orders.map(order => (
                                 <tr key={order.order_id} style={tableStyle.tr}>
                                     <td style={{ ...tableStyle.td, ...tableStyle.tdFirst }}>
-                                        {order.order_id}
-                                    </td>
-                                    <td style={tableStyle.td}>{order.customer_name}</td>
-                                    <td style={tableStyle.td}>{order.customer_phone}</td>
-                                    <td style={tableStyle.td}>
-                                        {order.order_items?.slice(0, 2).map(item => 
-                                            <div key={item.item_name}>
-                                                {item.item_name} x {item.quantity}
-                                            </div>
-                                        )}
-                                        {order.order_items?.length > 2 && `...還有 ${order.order_items.length - 2} 項`}
+                                        #{order.order_id}
+                                        <div style={{ fontSize: '10px', opacity: 0.7 }}>
+                                            {new Date(order.created_at).toLocaleString()}
+                                        </div>
                                     </td>
                                     <td style={tableStyle.td}>
-                                        NT${calculateTotal(order.order_items || [])}
+                                        {order.customer_name}
+                                        <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                                            {order.customer_phone}
+                                        </div>
                                     </td>
-                                    {/* 狀態修正為中文 */}
                                     <td style={tableStyle.td}>
-                                        {order.is_completed ? '✅ 已結單' : 
-                                         (order.payment_status === '已付款' ? '🟢 待出貨' : '🟡 欠款')}
+                                        NT${calculateTotal(order.order_items)}
+                                    </td>
+                                    <td style={tableStyle.td}>
+                                        <span style={{ color: order.is_completed ? SUCCESS_COLOR : WARNING_COLOR, fontWeight: 'bold' }}>
+                                            {order.is_completed ? '✅ 已結單' : '⏳ 待處理'}
+                                        </span>
+                                        <div style={{ fontSize: '12px', opacity: 0.8 }}>
+                                            付款: {order.payment_status}
+                                        </div>
+                                    </td>
+                                    <td style={tableStyle.td}>
+                                        {order.order_notes || '無'}
                                     </td>
                                     <td style={{ ...tableStyle.td, ...tableStyle.tdLast }}>
-                                        {/* 單筆導出按鈕 - 現代橙色 */}
+                                        {/* 單筆導出按鈕 */}
                                         <button
                                             onClick={() => handleExportSingleOrder(order)}
                                             style={{ 
                                                 ...tableStyle.button, 
-                                                backgroundColor: '#FF9800', 
+                                                backgroundColor: '#FF9800', // 橘色
                                                 color: BG_PRIMARY 
                                             }}
                                         >
@@ -415,7 +409,7 @@ const ReportExporter = () => {
                                                 onClick={() => handleCompleteOrder(order.order_id)}
                                                 style={{ 
                                                     ...tableStyle.button, 
-                                                    backgroundColor: ACCENT_COLOR, // 使用新的強調色
+                                                    backgroundColor: ACCENT_COLOR, // 使用強調色
                                                     color: 'white', 
                                                 }}
                                             >
