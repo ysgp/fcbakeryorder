@@ -1,6 +1,5 @@
-// File: src/components/MasterItemManager.jsx (已修正 import useCallback)
+// File: src/components/MasterItemManager.jsx (已修正 Supabase 欄位名稱)
 
-// 請注意：此處已修正 import 語句，確保 useCallback 可用。
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 
@@ -28,8 +27,8 @@ const MasterItemManager = () => {
         setLoading(true);
         const { data, error } = await supabase
             .from('master_items')
-            .select('*')
-            .order('item_name', { ascending: true });
+            .select('id, master_items, price, is_active') // <--- 修正: 選擇 master_items 和 price
+            .order('master_items', { ascending: true }); // <--- 修正: 用 master_items 排序
 
         if (error) {
             console.error('Error fetching items:', error);
@@ -55,9 +54,11 @@ const MasterItemManager = () => {
 
     const handleSave = async (item) => {
         setMessage('');
-        const { id, item_name, item_price, is_active } = item;
+        // 修正: 取得 master_items (品項名稱) 和 price (價格)
+        const { id, master_items, price, is_active } = item;
         
-        if (!item_name || item_price === undefined || item_price < 0) {
+        // 修正: 檢查 master_items 和 price
+        if (!master_items || price === undefined || price < 0) {
             setMessage('錯誤: 品項名稱和價格欄位不能為空，且價格不能小於 0。');
             setTimeout(() => setMessage(''), 5000);
             return;
@@ -66,8 +67,8 @@ const MasterItemManager = () => {
         const { error } = await supabase
             .from('master_items')
             .update({ 
-                item_name, 
-                item_price: parseFloat(item_price), 
+                master_items, // <--- 修正: 更新 master_items
+                price: parseFloat(price), // <--- 修正: 更新 price
                 is_active 
             })
             .eq('id', id);
@@ -76,7 +77,7 @@ const MasterItemManager = () => {
             console.error('Error updating item:', error);
             setMessage(`儲存失敗: ${error.message}`);
         } else {
-            setMessage(`✅ 品項 "${item_name}" 更新成功！`);
+            setMessage(`✅ 品項 "${master_items}" 更新成功！`); // <--- 修正: 顯示 master_items
             fetchItems(); 
         }
         setTimeout(() => setMessage(''), 5000);
@@ -91,8 +92,8 @@ const MasterItemManager = () => {
         }
         
         const newItem = {
-            item_name: newItemName,
-            item_price: parseFloat(newItemPrice),
+            master_items: newItemName, // <--- 修正: 寫入 master_items
+            price: parseFloat(newItemPrice), // <--- 修正: 寫入 price
             is_active: true
         };
         
@@ -113,7 +114,8 @@ const MasterItemManager = () => {
     };
     
     const handleDelete = async (item) => {
-        if (!window.confirm(`確定要刪除品項 "${item.item_name}" 嗎？此操作不可逆！`)) {
+        // 修正: 顯示 master_items
+        if (!window.confirm(`確定要刪除品項 "${item.master_items}" 嗎？此操作不可逆！`)) {
             return;
         }
 
@@ -127,7 +129,7 @@ const MasterItemManager = () => {
             console.error('Error deleting item:', error);
             setMessage(`刪除失敗: ${error.message}`);
         } else {
-            setMessage(`✅ 品項 "${item.item_name}" 已成功刪除。`);
+            setMessage(`✅ 品項 "${item.master_items}" 已成功刪除。`); // <--- 修正: 顯示 master_items
             fetchItems(); 
         }
         setTimeout(() => setMessage(''), 5000);
@@ -135,9 +137,11 @@ const MasterItemManager = () => {
 
 
     const filteredItems = items.filter(item => 
-        item.item_name.toLowerCase().includes(search.toLowerCase())
+        // 修正: 搜尋 item.master_items
+        item.master_items.toLowerCase().includes(search.toLowerCase())
     );
 
+    // ... (樣式代碼保持不變) ...
     // 現代感表格樣式
     const tableStyle = {
         tableContainer: {
@@ -307,8 +311,10 @@ const MasterItemManager = () => {
                             <td style={{ ...tableStyle.td, ...tableStyle.tdFirst }}>
                                 <input
                                     type="text"
-                                    value={item.item_name}
-                                    onChange={(e) => handleFieldChange(item.id, 'item_name', e.target.value)}
+                                    // 修正: 讀取 item.master_items
+                                    value={item.master_items}
+                                    // 修正: 更改 item.master_items
+                                    onChange={(e) => handleFieldChange(item.id, 'master_items', e.target.value)}
                                     style={tableStyle.input}
                                 />
                             </td>
@@ -317,8 +323,10 @@ const MasterItemManager = () => {
                                 <input
                                     type="number"
                                     min="0"
-                                    value={item.item_price}
-                                    onChange={(e) => handleFieldChange(item.id, 'item_price', e.target.value)}
+                                    // 修正: 讀取 item.price
+                                    value={item.price}
+                                    // 修正: 更改 item.price
+                                    onChange={(e) => handleFieldChange(item.id, 'price', e.target.value)}
                                     style={tableStyle.input}
                                 />
                             </td>
