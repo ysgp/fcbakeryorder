@@ -1,4 +1,4 @@
-// File: src/App.jsx (現代簡潔風格 - 已確認 import 正確)
+// File: src/App.jsx (修正為現代米色主題，適用移動設備)
 
 import React, { useState } from 'react';
 import ReportExporter from './components/ReportExporter';
@@ -6,14 +6,11 @@ import OrderFormWeb from './components/OrderFormWeb';
 import MasterItemManager from './components/MasterItemManager'; 
 import './App.css'; 
 
-// === 定義現代簡潔主題顏色 ===
-const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色 
-const BG_PRIMARY = '#1C1C1C';      // 主背景色 (柔和深灰色)
-const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色 (更亮)
-const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
-const SUCCESS_COLOR = '#4CAF50';   // 成功色
-const ERROR_COLOR = '#F44336';     // 錯誤色
-
+// === 新增：米色/大地色系配色 ===
+const ACCENT_COLOR = '#A0522D';  // 赤褐色/強調色
+const BG_PRIMARY = '#FAF0E6';    // 主背景色 (米色)
+const TEXT_COLOR = '#333333';    // 主要文字顏色 (深灰)
+const BG_SECONDARY = '#FFFFFF';  // 次級背景色 (卡片/按鈕)
 
 function App() {
   const [currentPage, setCurrentPage] = useState('orderInput'); 
@@ -22,75 +19,68 @@ function App() {
     <button
       onClick={() => setCurrentPage(targetPage)}
       style={{
-        padding: '10px 20px',
-        fontSize: '16px', 
+        padding: '10px 15px',
+        fontSize: '15px', 
         marginRight: '10px',
         cursor: 'pointer',
-        border: 'none', 
-        borderRadius: '8px', 
-        backgroundColor: currentPage === targetPage ? ACCENT_COLOR : BG_SECONDARY, 
-        color: currentPage === targetPage ? 'white' : TEXT_COLOR, 
-        boxShadow: currentPage === targetPage ? `0 4px 12px ${ACCENT_COLOR}60` : 'none', 
+        border: `1px solid ${ACCENT_COLOR}`,
+        // 活躍狀態使用強調色，非活躍使用次級背景色
+        backgroundColor: currentPage === targetPage ? ACCENT_COLOR : BG_SECONDARY,
+        color: currentPage === targetPage ? BG_SECONDARY : TEXT_COLOR,
+        borderRadius: '8px', // 圓潤風格
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         transition: 'all 0.3s ease',
-        fontWeight: 'bold',
+        fontWeight: '600'
       }}
     >
       {name}
     </button>
   );
 
-  const appStyle = {
-    backgroundColor: BG_PRIMARY, 
-    color: TEXT_COLOR, 
-    minHeight: '100vh', 
-    padding: '30px', 
-    fontFamily: 'Roboto, "Helvetica Neue", Arial, sans-serif'
-  };
-
   return (
-    <div className="App" style={appStyle}>
+    <div style={{ 
+        backgroundColor: BG_PRIMARY, 
+        color: TEXT_COLOR, 
+        minHeight: '100vh', 
+        padding: '20px', 
+        fontFamily: 'Roboto, sans-serif' 
+    }}>
       
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      {/* 限制最大寬度為手機尺寸 (約 iPhone 16 Pro Max 寬度: 430px) */}
+      <div style={{ maxWidth: '430px', margin: '0 auto', padding: '15px', backgroundColor: BG_SECONDARY, borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        
+        {/* 標題 */}
         <h1 style={{ 
             color: ACCENT_COLOR, 
+            borderBottom: `2px solid ${ACCENT_COLOR}30`, 
             paddingBottom: '10px', 
-            marginBottom: '30px', 
+            marginBottom: '20px', 
             textAlign: 'center',
-            fontSize: '32px',
-            fontWeight: '300' 
+            fontSize: '22px' // 調整標題大小以符合移動設備
         }}>
             鳳城訂單管理系統
         </h1>
         
+        {/* 導航欄 */}
         <div style={{ 
-            paddingBottom: '20px', 
-            marginBottom: '30px', 
+            borderBottom: `1px solid #ddd`, 
+            paddingBottom: '15px', 
+            marginBottom: '25px', 
             textAlign: 'center', 
             display: 'flex', 
-            gap: '15px', 
-            justifyContent: 'center'
+            flexDirection: 'column', // 改為垂直排列以適應手機
+            gap: '10px' 
         }}>
           <NavButton name="外場訂單輸入" targetPage="orderInput" />
           <NavButton name="訂單報表中心" targetPage="reportExporter" />
           <NavButton name="品項主檔管理" targetPage="masterItemManager" /> 
         </div>
 
-        <div style={{ display: 'flex', minHeight: '80vh' }}>
-          {currentPage === 'orderInput' && (
-            <div style={{ flex: 1 }}>
-              <OrderFormWeb />
-            </div>
-          )}
-          {currentPage === 'reportExporter' && (
-            <div style={{ flex: 1 }}>
-              <ReportExporter />
-            </div>
-          )}
-          {currentPage === 'masterItemManager' && (
-             <div style={{ flex: 1 }}>
-                <MasterItemManager />
-             </div>
-          )}
+        {/* 內容區塊 */}
+        <div style={{ minHeight: '60vh' }}>
+          {currentPage === 'orderInput' && <OrderFormWeb />}
+          {currentPage === 'reportExporter' && <ReportExporter />}
+          {currentPage === 'masterItemManager' && <MasterItemManager />}
         </div>
       </div>
     </div>
