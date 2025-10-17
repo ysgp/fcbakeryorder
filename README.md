@@ -1,16 +1,34 @@
-# React + Vite
+# 🍰 鳳城麵包店電子訂單管理系統 (OMS) - 大地主題版
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+這是一個專為中小型烘焙坊、麵包店或外賣訂單業務設計的輕量級訂單管理系統（OMS）。
+系統採用現代化的 React 框架和 Supabase 作為後端，提供一個手機優化的、大地色系的直觀介面。
 
-Currently, two official plugins are available:
+## ✨ 核心特徵
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 🎨 現代化與移動優化
+* **大地色系美學**：採用溫暖舒適的大地色系主題，提供專業且友善的使用體驗。
+* **手機響應式**：介面完全針對移動設備（如 iPhone 16 等）進行設計和佈局優化，確保在手機上也能流暢操作。
+* **單頁應用程式 (SPA)**：透過導航快速切換「訂單輸入」、「報表中心」和「品項管理」頁面，無需重新載入。
 
-## React Compiler
+### 📝 訂單輸入 (A 節點)
+* **自動化訂單 ID 格式**：訂單編號從 `0001` 開始顯示，使用四位數序號格式，便於管理。
+* **智能品項輸入**：在輸入品項名稱時，提供即時的品項主檔清單模糊搜尋建議。
+* **詳細預取安排**：支援分別輸入和記錄 `預取日期` 和 `預取時間`。
+* **即時總金額計算**：根據選定品項及數量，即時計算訂單總金額。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 📊 報表與導出 (B 節點)
+* **客製化檔案命名**：導出的單筆訂單 Excel 檔案名稱格式為：**`單號_顧客姓氏.xlsx`**（例如：`0015_王.xlsx`）。
+* **數據導出**：一鍵導出所有或待處理訂單數據到標準 Excel 檔案，包含所有關鍵資訊和總金額。
+* **工作流程管理**：支援快速篩選「待處理」訂單，並提供一鍵「結單」功能，將訂單標記為已完成。
 
-## Expanding the ESLint configuration
+### ⚙️ 品項主檔管理
+* **完整的 CRUD 操作**：輕鬆新增、編輯價格、切換啟用狀態或刪除品項。
+* **啟用/禁用切換**：可快速將暫時不賣的品項設為禁用，使其不會出現在訂單輸入頁面的建議清單中。
+* **內建搜尋功能**：方便在大量品項中快速定位和編輯目標品項。
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🛠️ 技術棧
+
+* **前端框架**：React.js
+* **CSS 樣式**：內聯樣式 (JSX style objects) 實現移動優先設計和主題色。
+* **後端/資料庫**：Supabase (作為資料庫和 API 接口)
+* **報表工具**：`xlsx` 和 `file-saver` 庫用於 Excel 導出功能。

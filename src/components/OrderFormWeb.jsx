@@ -1,459 +1,485 @@
-// File: src/components/OrderFormWeb.jsx (最終檢查：確保 map 內部只渲染字串/數字/JSX元素)
+// File: src/components/OrderFormWeb.jsx (已新增品項搜尋功能 & 手機優化 & 日期時間選擇 - 大地色系)
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '../supabase';
 
-// === 米色/大地色系配色 ===
-const ACCENT_COLOR = '#A0522D';
-const BG_PRIMARY = '#FAF0E6';
-const TEXT_COLOR = '#333333';
-const BG_SECONDARY = '#FFFFFF';
-const ERROR_COLOR = '#D9534F'; 
-const SUCCESS_COLOR = '#2E8B57';
-const WARNING_COLOR = '#F0AD4E'; 
+// 定義大地主題顏色
+const TECH_ACCENT = '#A0522D'; // 土褐色 (Sienna)
+const BG_PRIMARY = '#FFF8E1'; // 乳米色 (Creamy Beige)
+const TEXT_COLOR = '#4E342E'; // 深棕色 (Dark Brown)
+const BG_SECONDARY = '#F5E3C8'; // 淺棕色 (Light Tan)
+const ERROR_COLOR = '#D32F2F'; // 紅色
+const SUCCESS_COLOR = '#689F38'; // 青綠色
 
-// 初始品項結構
 const initialItem = { item_name: '', quantity: 1 };
 
 const OrderFormWeb = () => {
-    // 狀態：適應資料庫欄位 customer_last_name
-    const [customerLastName, setCustomerLastName] = useState(''); 
+    const [customerName, setCustomerName] = useState('');
     const [customerPhone, setCustomerPhone] = useState('');
     const [paymentStatus, setPaymentStatus] = useState('欠款'); 
-    
-    // 狀態：適應資料庫欄位 pickup_date 和 pickup_time
-    const [pickupDate, setPickupDate] = useState('');
-    const [pickupTimeOfDay, setPickupTimeOfDay] = useState(''); 
-    
+    // MODIFICATION 1: 拆分日期和時間
+    const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0]); // 預設為今天
+    const [pickupTime, setPickupTime] = useState(''); 
     const [orderNotes, setOrderNotes] = useState(''); 
-    const [orderItems, setOrderItems] = useState([{ ...initialItem }]); 
+    const [orderItems, setOrderItems] = useState([initialItem]); 
     const [masterItems, setMasterItems] = useState([]); 
     const [loading, setLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false); 
     const [message, setMessage] = useState('');
     
+    // 用於搜尋功能的狀態
     const [searchTerm, setSearchTerm] = useState('');
-    const [showSuggestionsIndex, setShowSuggestionsIndex] = useState(null);
-    const itemRefs = useRef([]);
+    const [showSuggestionsIndex, setShowSuggestionsIndex] = useState(null); 
+    const suggestionRefs = useRef([]);
 
-    // 載入品項主檔
+
+    const itemPriceMap = useMemo(() => {
+        return masterItems.reduce((map, item) => {
+            map[item.name_zh] = item.price;
+            return map;
+        }, {});
+    }, [masterItems]);
+
+    // 1. 載入**已啟用**的品項主檔和價格
     useEffect(() => {
         const fetchMasterItems = async () => {
             setLoading(true);
             const { data, error } = await supabase
                 .from('master_items')
                 .select('name_zh, price') 
-                .eq('is_active', true);
+                .eq('is_active', true) // 確保只載入啟用的品項
+                .order('name_zh', { ascending: true }); // 按名稱排序
 
             if (error) {
                 console.error('Error fetching master items:', error);
-                setMessage({ type: 'error', text: '錯誤：無法載入品項清單 (請檢查 Supabase 連線)' });
+                setMessage('錯誤：無法載入品項清單 (' + error.message + ')');
             } else {
                 setMasterItems(data);
-                setMessage('');
             }
             setLoading(false);
         };
         fetchMasterItems();
     }, []);
 
-    // 樣式定義 (未變動)
-    const inputStyle = {
-        padding: '12px',
-        border: `1px solid #ccc`,
-        borderRadius: '8px', 
-        backgroundColor: BG_SECONDARY,
-        color: TEXT_COLOR,
-        width: '100%',
-        boxSizing: 'border-box',
-        fontSize: '16px',
-        marginTop: '5px'
-    };
-
-    const selectStyle = {
-        ...inputStyle,
-        appearance: 'none',
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath fill='%23333333' d='M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z'/%3E%3C/svg%3E")`,
-        backgroundRepeat: 'no-repeat',
-        backgroundPosition: 'right 10px center',
-        paddingRight: '30px',
-    };
-    
-    const styles = {
-        container: { maxWidth: '100%', margin: '0 auto', padding: '10px' },
-        formGroup: { marginBottom: '15px' },
-        input: inputStyle,
-        select: selectStyle,
-        label: { display: 'block', marginBottom: '5px', fontWeight: 'bold', fontSize: '15px', color: TEXT_COLOR },
-        sectionHeader: { fontSize: '18px', marginTop: '20px', marginBottom: '10px', borderBottom: `1px solid ${ACCENT_COLOR}50`, paddingBottom: '5px', color: ACCENT_COLOR },
-        itemRow: { display: 'flex', alignItems: 'center', marginBottom: '10px', gap: '8px' },
-        removeButton: {
-            backgroundColor: ERROR_COLOR,
-            color: 'white',
-            border: 'none',
-            padding: '10px',
-            borderRadius: '8px', 
-            cursor: 'pointer',
-            width: '40px',
-            height: '40px',
-            flexShrink: 0,
-            fontSize: '18px'
-        },
-        addButton: {
-            backgroundColor: SUCCESS_COLOR,
-            color: BG_SECONDARY,
-            border: 'none',
-            padding: '12px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            width: '100%',
-            marginTop: '10px',
-            marginBottom: '20px',
-            fontWeight: 'bold',
-            fontSize: '16px'
-        },
-        submitButton: {
-            backgroundColor: ACCENT_COLOR,
-            color: BG_SECONDARY,
-            border: 'none',
-            padding: '18px',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            width: '100%',
-            fontSize: '20px',
-            fontWeight: 'bold',
-            boxShadow: `0 4px 10px ${ACCENT_COLOR}50`, 
-            transition: 'background-color 0.2s, box-shadow 0.2s',
-        },
-        messageBox: {
-            padding: '15px',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            border: `1px solid`,
-            fontWeight: 'bold',
-            color: TEXT_COLOR
-        },
-        suggestionBox: {
-            position: 'absolute',
-            top: '100%', 
-            left: 0,
-            right: 0,
-            zIndex: 10,
-            backgroundColor: BG_SECONDARY,
-            border: `1px solid ${ACCENT_COLOR}50`,
-            borderRadius: '8px',
-            maxHeight: '200px',
-            overflowY: 'auto',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-        },
-        suggestionItem: {
-            padding: '10px',
-            cursor: 'pointer',
-            borderBottom: '1px solid #eee',
-            fontSize: '15px',
-        }
-    };
-    
-    // 處理訂單項目變更
-    const handleItemChange = (index, field, value) => {
-        const newItems = [...orderItems]; 
-        
-        newItems[index] = { 
-            ...newItems[index], 
-            [field]: value 
-        };
-        
-        setOrderItems(newItems);
-
-        if (field === 'item_name') {
-            setSearchTerm(value);
-            setShowSuggestionsIndex(index);
-        }
-    };
-    
-    // 處理搜尋建議點擊
-    const handleSelectSuggestion = (index, name) => {
-        const newItems = [...orderItems];
-        newItems[index] = { 
-            ...newItems[index], 
-            item_name: name 
-        };
-        setOrderItems(newItems);
-        setShowSuggestionsIndex(null); 
-
-        if (itemRefs.current[index] && itemRefs.current[index].quantityInput) {
-             itemRefs.current[index].quantityInput.focus();
-        }
-    };
-
-    // 過濾建議
-    const suggestions = useMemo(() => {
-        if (!searchTerm || showSuggestionsIndex === null) return [];
-        const uniqueItems = Array.from(new Set(masterItems.map(item => item.name_zh)));
-        return uniqueItems
-            .filter(name => name.toLowerCase().includes(searchTerm.toLowerCase()))
-            .slice(0, 10); 
-    }, [searchTerm, masterItems, showSuggestionsIndex]);
-
-    // 移除品項
-    const handleRemoveItem = (index) => {
-        const newItems = orderItems.filter((_, i) => i !== index);
-        setOrderItems(newItems.length > 0 ? newItems : [{ ...initialItem }]);
-    };
-
-    // 新增品項
-    const handleAddItem = () => {
-        setOrderItems([...orderItems, { ...initialItem }]);
-    };
-
-    // 總金額計算
-    const calculateTotal = () => {
+    // 2. 計算訂單總價
+    const totalAmount = useMemo(() => {
         return orderItems.reduce((total, item) => {
-            const masterItem = masterItems.find(mi => mi.name_zh === item.item_name);
-            const price = masterItem ? masterItem.price : 0;
-            const quantity = parseInt(item.quantity) || 0;
-            return total + price * quantity;
+            const price = itemPriceMap[item.item_name] || 0;
+            return total + (price * item.quantity);
+        }, 0);
+    }, [orderItems, itemPriceMap]);
+
+
+    // 處理品項列表的變動
+    const handleItemChange = (index, field, value) => {
+        const newItems = [...orderItems];
+        if (field === 'quantity') {
+            newItems[index][field] = Math.max(0, parseInt(value) || 0); 
+        } else {
+            newItems[index] = { ...newItems[index], [field]: value };
+        }
+        setOrderItems(newItems);
+    };
+
+    // 處理品項名稱輸入 (用於搜尋)
+    const handleItemNameInput = (index, value) => {
+        handleItemChange(index, 'item_name', value);
+        setShowSuggestionsIndex(index); 
+        setSearchTerm(value);
+    };
+    
+    // 選擇建議品項
+    const handleSelectSuggestion = (index, itemName) => {
+        handleItemChange(index, 'item_name', itemName);
+        setShowSuggestionsIndex(null); // 關閉建議列表
+    };
+    
+    // 根據當前輸入過濾品項建議
+    const getSuggestions = (currentInput) => {
+        if (!currentInput) return masterItems;
+        return masterItems.filter(item =>
+            item.name_zh.toLowerCase().includes(currentInput.toLowerCase())
+        ).slice(0, 10); // 限制只顯示前10個
+    };
+
+    const addItem = () => {
+        setOrderItems([...orderItems, { ...initialItem }]);
+        // 新增後，將焦點移到新項目的搜尋框
+        setTimeout(() => {
+            if (suggestionRefs.current[orderItems.length]) {
+                 suggestionRefs.current[orderItems.length].focus();
+            }
         }, 0);
     };
+    
+    const removeItem = (index) => {
+        const newItems = orderItems.filter((_, i) => i !== index);
+        setOrderItems(newItems.length > 0 ? newItems : [{ ...initialItem }]); 
+        setShowSuggestionsIndex(null); 
+    };
+    
+    const resetForm = () => {
+        setCustomerName('');
+        setCustomerPhone('');
+        setPaymentStatus('欠款');
+        setPickupDate(new Date().toISOString().split('T')[0]); // 重設日期
+        setPickupTime('');
+        setOrderNotes('');
+        setOrderItems([{ ...initialItem }]); 
+        setShowSuggestionsIndex(null); 
+    };
+    
+    // 假定訂單編號生成邏輯：取得最大的 order_id，然後 +1
+    // **注意: 此為前端的簡化邏輯，實際應由後端或資料庫序列處理**
+    const formatOrderId = (id) => {
+        // 假設 id 是一個數字
+        if (typeof id === 'number') {
+            return String(id).padStart(4, '0');
+        }
+        // 如果是 UUID，則取前八位，並假定它對應某個序列號
+        // 這裡我們只是為了顯示而截取
+        return String(id).substring(0, 8); 
+    };
 
-    // 提交表單
+    // 3. 送出訂單到 Supabase
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e.preventDefault(); 
         if (isSubmitting) return;
 
-        // 驗證
-        if (!customerLastName || !customerPhone || !pickupDate || !pickupTimeOfDay || orderItems.every(item => !item.item_name.trim())) {
-            setMessage({ type: 'error', text: '請填寫顧客姓名、電話、取貨日期和時間，並至少輸入一個品項名稱。' });
+        // 確保選定的品項名稱是有效的 (即存在於 masterItems 中)
+        const validItems = orderItems.filter(item => 
+            itemPriceMap[item.item_name] !== undefined && item.quantity > 0
+        );
+        
+        if (!customerName || !customerPhone || validItems.length === 0) {
+            setMessage('請填寫完整的顧客資訊和至少一項有效品項及數量。');
             return;
         }
 
         setIsSubmitting(true);
-        setMessage({ type: 'info', text: '訂單提交中...' });
-        
-        // 處理訂單項目格式
-        const itemsToInsert = orderItems
-            .filter(item => item.item_name.trim() && (parseInt(item.quantity) > 0))
-            .map(item => {
-                const masterItem = masterItems.find(mi => mi.name_zh === item.item_name);
-                const price = masterItem ? masterItem.price : 0;
-                const quantity = parseInt(item.quantity);
-                return `${item.item_name} x ${quantity} ($${price * quantity})`; 
-            });
+        setMessage('');
 
-        // 建立訂單主體
-        const { data: orderData, error: orderError } = await supabase
+        const newOrder = {
+            customer_last_name: customerName,
+            customer_phone: customerPhone,
+            payment_status: paymentStatus,
+            // MODIFICATION 2: 使用新的 pickupDate 狀態
+            pickup_date: pickupDate, 
+            pickup_time: pickupTime,
+            order_notes: orderNotes,
+            items_list: validItems.map(item => ({
+                ...item,
+                price: itemPriceMap[item.item_name] || 0
+            })),
+            total_amount: totalAmount, 
+        };
+
+        const { data, error } = await supabase
             .from('orders')
-            .insert({
-                customer_last_name: customerLastName, 
-                customer_phone: customerPhone,
-                pickup_date: pickupDate,             
-                pickup_time: pickupTimeOfDay,        
-                
-                payment_status: paymentStatus,
-                order_notes: orderNotes,
-                
-                items_list: itemsToInsert.join('; '), 
-                
-                total_amount: calculateTotal(),
-                is_completed: false,
-                created_at: new Date().toISOString()
-            })
-            .select();
+            .insert([newOrder])
+            .select('order_id'); // 只選取 order_id
 
-        if (orderError) {
-            console.error('Order submission error:', orderError);
-            setMessage({ type: 'error', text: `訂單提交失敗: ${orderError.message}` });
+        if (error) {
+            console.error('Error inserting order:', error);
+            setMessage(`訂單建立失敗：${error.message}`);
         } else {
-            // 提交成功後清除表單
-            setCustomerLastName(''); 
-            setCustomerPhone('');
-            setPickupDate(''); 
-            setPickupTimeOfDay(''); 
-            setOrderNotes('');
-            setOrderItems([{ ...initialItem }]);
-            setMessage({ type: 'success', text: `訂單 #${orderData[0].order_id} 提交成功！總金額：$${calculateTotal()}` });
+            const insertedOrder = data[0];
+            // MODIFICATION: 假設這是第一個或第二個訂單，用於展示格式
+            const displayId = formatOrderId(insertedOrder.order_id); 
+            setMessage(`[成功] 資料傳輸完成！訂單編號: ${displayId}。 總金額: $${totalAmount.toFixed(0)}。`);
+            resetForm(); 
         }
-
         setIsSubmitting(false);
     };
-    
-    return (
-        <div style={styles.container}>
-            <h2 style={{ color: ACCENT_COLOR, textAlign: 'center', marginBottom: '20px' }}>外場訂單輸入</h2>
 
-            {/* 訊息框 */}
+    if (loading) {
+        return <div style={{padding: '20px', textAlign: 'center', color: TECH_ACCENT}}>載入核心數據中...</div>;
+    }
+
+    return (
+        // MODIFICATION 3: 調整 container 樣式以適應移動設備
+        <div style={styles.container}>
+            <h2 style={styles.header}>鳳城麵包店電子訂單 (A節點)</h2>
+            
             {message && (
-                <div style={{ 
-                    ...styles.messageBox, 
-                    borderColor: message.type === 'error' ? ERROR_COLOR : (message.type === 'success' ? SUCCESS_COLOR : WARNING_COLOR),
-                    backgroundColor: message.type === 'error' ? `${ERROR_COLOR}10` : (message.type === 'success' ? `${SUCCESS_COLOR}10` : `${WARNING_COLOR}10`),
-                    color: message.type === 'error' ? ERROR_COLOR : (message.type === 'success' ? SUCCESS_COLOR : TEXT_COLOR),
-                    fontWeight: 'bold',
-                }}>
-                    {message.text}
+                <div style={{...styles.messageBox, backgroundColor: message.includes('成功') ? SUCCESS_COLOR + '30' : ERROR_COLOR + '30', borderColor: message.includes('成功') ? SUCCESS_COLOR : ERROR_COLOR}}>
+                    {message}
                 </div>
             )}
-            
+
             <form onSubmit={handleSubmit}>
-                {/* 顧客資料輸入區 (略) */}
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>顧客姓名 (必填)</label>
-                    <input
-                        type="text"
-                        value={customerLastName}
-                        onChange={(e) => setCustomerLastName(e.target.value)}
-                        style={styles.input}
-                        placeholder="輸入顧客姓名"
-                        required
-                    />
-                </div>
-
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>顧客電話 (必填)</label>
-                    <input
-                        type="tel"
-                        value={customerPhone}
-                        onChange={(e) => setCustomerPhone(e.target.value)}
-                        style={styles.input}
-                        placeholder="輸入顧客電話"
-                        required
-                    />
-                </div>
-
-                {/* 取貨日期/時間輸入區 (略) */}
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>預計取貨日期 (必填)</label>
-                    <input
-                        type="date"
-                        value={pickupDate}
-                        onChange={(e) => setPickupDate(e.target.value)}
-                        style={styles.input}
-                        required
-                    />
-                </div>
                 
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>預計取貨時間 (必填)</label>
-                    <input
-                        type="time"
-                        value={pickupTimeOfDay}
-                        onChange={(e) => setPickupTimeOfDay(e.target.value)}
-                        style={styles.input}
-                        required
-                    />
-                </div>
-                
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>付款狀態</label>
-                    <select
-                        value={paymentStatus}
-                        onChange={(e) => setPaymentStatus(e.target.value)}
-                        style={styles.select}
-                    >
-                        <option value="已付清">已付清</option>
+                {/* 顧客資訊 */}
+                <label style={styles.label}>顧客資訊</label>
+                <input type="text" placeholder="顧客姓氏 (例如: 王)" value={customerName} onChange={(e) => setCustomerName(e.target.value)} style={styles.input} required/>
+                <input type="tel" placeholder="顧客電話" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} style={styles.input} required/>
+
+                {/* 訂單狀態 */}
+                <label style={styles.label}>訂單與預取資訊</label>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                    <select value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value)} style={{...styles.input, ...styles.select, flex: 1, marginBottom: 0}}>
                         <option value="欠款">欠款</option>
+                        <option value="已付清">已付清</option>
+                        <option value="定金">定金</option>
                     </select>
                 </div>
-
-                <h3 style={styles.sectionHeader}>訂單明細</h3>
-
-                {/* 品項輸入區 - 這是最可能發生錯誤的地方 */}
-                {orderItems.map((item, index) => (
-                    <div key={index} style={styles.itemRow}>
-                        
-                        {/* 品項名稱 (佔 60%) */}
-                        <div style={{ flex: 3, position: 'relative' }}>
-                            <input
-                                type="text"
-                                value={item.item_name} 
-                                onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
-                                onFocus={() => {
-                                    setSearchTerm(item.item_name);
-                                    setShowSuggestionsIndex(index);
-                                }}
-                                onBlur={() => setTimeout(() => setShowSuggestionsIndex(null), 200)} 
-                                style={styles.input}
-                                placeholder="品項名稱"
-                                ref={el => itemRefs.current[index] = { ...itemRefs.current[index], nameInput: el }}
-                            />
-                            
-                            {/* 搜尋建議 */}
-                            {showSuggestionsIndex === index && suggestions.length > 0 && (
-                                <div style={styles.suggestionBox}>
-                                    {suggestions.map((name, i) => (
-                                        <div
-                                            key={i}
-                                            style={styles.suggestionItem}
-                                            onMouseDown={() => handleSelectSuggestion(index, name)} 
-                                        >
-                                            {name}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                        
-                        {/* 數量 (佔 30%) */}
-                        <input
-                            type="number"
-                            value={item.quantity} 
-                            onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                            style={{ ...styles.input, flex: 1, textAlign: 'right' }}
-                            min="1"
-                            placeholder="數量"
-                            ref={el => itemRefs.current[index] = { ...itemRefs.current[index], quantityInput: el }}
-                        />
-                        
-                        {/* 移除按鈕 */}
-                        <button
-                            type="button"
-                            onClick={() => handleRemoveItem(index)}
-                            style={styles.removeButton}
-                        >
-                            <span role="img" aria-label="remove">❌</span>
-                        </button>
-                    </div>
-                ))}
                 
-                {/* 新增品項按鈕 */}
-                <button
-                    type="button"
-                    onClick={handleAddItem}
-                    style={styles.addButton}
-                >
-                    + 新增品項
-                </button>
-
-                {/* 備註與總金額 (略) */}
-                <div style={styles.formGroup}>
-                    <label style={styles.label}>訂單備註</label>
-                    <textarea
-                        value={orderNotes}
-                        onChange={(e) => setOrderNotes(e.target.value)}
-                        style={{ ...styles.input, minHeight: '80px', resize: 'vertical' }}
-                        placeholder="輸入特殊要求或注意事項..."
-                    />
+                {/* MODIFICATION 4: 日期和時間選擇器 */}
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <input type="date" placeholder="預取日期" value={pickupDate} onChange={(e) => setPickupDate(e.target.value)} style={{...styles.input, flex: 1}} required/>
+                    <input type="time" placeholder="預取時間" value={pickupTime} onChange={(e) => setPickupTime(e.target.value)} style={{...styles.input, flex: 1}} />
                 </div>
                 
-                <h3 style={{ ...styles.sectionHeader, borderBottom: 'none', textAlign: 'right', fontSize: '20px' }}>
-                    預估總金額: <span style={{ color: ERROR_COLOR }}>${calculateTotal()}</span>
-                </h3>
+                {/* 訂單備註 */}
+                <textarea placeholder="訂單備註/特殊需求" value={orderNotes} onChange={(e) => setOrderNotes(e.target.value)} style={styles.textarea}/>
 
-                {/* 提交按鈕 */}
-                <button
-                    type="submit"
-                    disabled={isSubmitting || orderItems.every(item => !item.item_name.trim())}
-                    style={{ 
-                        ...styles.submitButton,
-                        opacity: isSubmitting ? 0.7 : 1,
-                        cursor: isSubmitting ? 'not-allowed' : 'pointer'
-                    }}
-                >
-                    {isSubmitting ? '提交中...' : '提交訂單'}
+                <h3 style={styles.sectionHeader}>品項清單</h3>
+                
+                {orderItems.map((item, index) => {
+                    const price = itemPriceMap[item.item_name] || 0;
+                    const subtotal = price * item.quantity;
+                    const suggestions = getSuggestions(item.item_name);
+
+                    return (
+                        // MODIFICATION 5: 優化品項行佈局以適應手機
+                        <div key={index} style={styles.itemRowContainer}>
+                            
+                            {/* 品項搜尋框 (佔多數空間) */}
+                            <div style={{ flex: 3, marginRight: '5px', position: 'relative' }}>
+                                <input 
+                                    type="text"
+                                    placeholder="搜尋品項..."
+                                    value={item.item_name}
+                                    onChange={(e) => handleItemNameInput(index, e.target.value)}
+                                    onFocus={() => setShowSuggestionsIndex(index)}
+                                    onBlur={() => setTimeout(() => setShowSuggestionsIndex(null), 200)} // 延遲關閉，允許點擊
+                                    style={{...styles.input, marginBottom: '0', fontSize: '14px'}}
+                                    ref={el => suggestionRefs.current[index] = el}
+                                    required
+                                />
+                                
+                                {/* 建議列表 */}
+                                {showSuggestionsIndex === index && suggestions.length > 0 && (
+                                    <div style={styles.suggestionBox}>
+                                        {suggestions.map((suggestion, i) => (
+                                            <div 
+                                                key={i} 
+                                                style={styles.suggestionItem}
+                                                onClick={() => handleSelectSuggestion(index, suggestion.name_zh)}
+                                            >
+                                                {suggestion.name_zh} (${suggestion.price})
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* 數量輸入 (佔小部分空間) */}
+                            <input
+                                type="number"
+                                placeholder="數"
+                                value={item.quantity === 0 ? '' : item.quantity}
+                                onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
+                                style={{...styles.input, flex: 0.8, textAlign: 'center', marginRight: '5px', marginBottom: '0', fontSize: '14px', minWidth: '40px'}}
+                                min="1"
+                                required
+                            />
+
+                            {/* 小計顯示 (佔小部分空間) */}
+                            <div style={{...styles.subtotalDisplay, minWidth: '50px', fontSize: '14px'}}>
+                                ${subtotal.toFixed(0)}
+                            </div>
+                            
+                            {/* 移除按鈕 */}
+                            {orderItems.length > 1 && (
+                                <button 
+                                    type="button"
+                                    onClick={() => removeItem(index)} 
+                                    style={{...styles.removeButton, width: '30px', height: '30px', padding: '0', fontSize: '12px'}}
+                                >
+                                    X
+                                </button>
+                            )}
+                        </div>
+                    );
+                })}
+                
+                <button type="button" onClick={addItem} style={styles.addButton}>
+                    + 增加品項
+                </button>
+
+                {/* 總金額顯示 */}
+                <div style={styles.totalDisplay}>
+                    訂單總金額: <span style={{ fontWeight: 'bold', fontSize: '24px', color: TECH_ACCENT }}>${totalAmount.toFixed(0)}</span>
+                </div>
+                
+                <button type="submit" disabled={isSubmitting} style={styles.submitButton}>
+                    {isSubmitting ? '資料傳輸中...' : `確認送出訂單 ($${totalAmount.toFixed(0)})`}
                 </button>
             </form>
         </div>
     );
+};
+
+// 大地色系 CSS 樣式 (新增搜尋建議的樣式)
+const styles = {
+    container: { 
+        padding: '15px', // 減少邊距
+        maxWidth: '100%', // 適應手機寬度
+        margin: '0 auto', // 移除水平邊距，改為自動
+        backgroundColor: BG_SECONDARY, 
+        borderRadius: '0', // 手機全寬
+        boxShadow: `0 0 10px ${TECH_ACCENT}33`, // 減少陰影
+        border: `1px solid ${TECH_ACCENT}55`, 
+    },
+    header: { 
+        fontSize: '24px', // 調整字體大小
+        marginBottom: '15px', 
+        textAlign: 'center', 
+        color: TECH_ACCENT,
+        borderBottom: `2px dashed ${TECH_ACCENT}50`, 
+        paddingBottom: '10px' 
+    },
+    input: { 
+        width: '100%', 
+        padding: '10px', // 減少 padding
+        marginBottom: '10px', // 減少邊距
+        border: `1px solid ${TECH_ACCENT}50`, 
+        borderRadius: '6px', 
+        backgroundColor: BG_PRIMARY, 
+        color: TEXT_COLOR,
+        boxSizing: 'border-box',
+        fontSize: '14px', // 調整字體大小
+    },
+    textarea: {
+        width: '100%', 
+        padding: '10px', 
+        marginBottom: '10px', 
+        border: `1px solid ${TECH_ACCENT}50`, 
+        borderRadius: '6px',
+        minHeight: '80px',
+        backgroundColor: BG_PRIMARY,
+        color: TEXT_COLOR,
+        boxSizing: 'border-box',
+        fontSize: '14px',
+    },
+    select: {
+        appearance: 'none',
+        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%23${TEXT_COLOR.substring(1)}' class='bi bi-chevron-down' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E")`,
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'right 10px center',
+        paddingRight: '30px',
+    },
+    label: { 
+        display: 'block', 
+        marginBottom: '5px', 
+        fontWeight: 'bold',
+        color: TECH_ACCENT,
+        fontSize: '14px' // 調整字體大小
+    },
+    sectionHeader: { 
+        fontSize: '18px', // 調整字體大小
+        marginTop: '20px', 
+        marginBottom: '10px', 
+        color: TEXT_COLOR,
+        borderBottom: `1px solid ${TECH_ACCENT}50`, 
+        paddingBottom: '5px' 
+    },
+    itemRowContainer: { 
+        display: 'flex', 
+        alignItems: 'center', 
+        marginBottom: '10px', // 減少邊距
+        position: 'relative', 
+    },
+    subtotalDisplay: {
+        flexShrink: 0,
+        width: '60px',
+        textAlign: 'right',
+        fontWeight: 'bold',
+        fontSize: '14px',
+        marginRight: '5px',
+        color: SUCCESS_COLOR, 
+    },
+    totalDisplay: {
+        textAlign: 'right',
+        fontSize: '18px',
+        padding: '10px 0',
+        borderTop: `2px solid ${TECH_ACCENT}`,
+        marginTop: '15px',
+        marginBottom: '10px',
+        color: TEXT_COLOR,
+    },
+    removeButton: {
+        backgroundColor: ERROR_COLOR,
+        color: 'white',
+        border: 'none',
+        padding: '5px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        width: '30px',
+        height: '30px',
+        flexShrink: 0,
+        transition: 'background-color 0.2s',
+        fontWeight: 'bold',
+        fontSize: '12px'
+    },
+    addButton: {
+        backgroundColor: SUCCESS_COLOR,
+        color: BG_PRIMARY,
+        border: 'none',
+        padding: '10px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        width: '100%',
+        marginTop: '10px',
+        marginBottom: '15px',
+        fontWeight: 'bold',
+        transition: 'background-color 0.2s, box-shadow 0.2s',
+        fontSize: '16px'
+    },
+    submitButton: {
+        backgroundColor: TECH_ACCENT,
+        color: BG_PRIMARY,
+        border: 'none',
+        padding: '15px',
+        borderRadius: '6px',
+        cursor: 'pointer',
+        width: '100%',
+        fontSize: '18px', // 調整字體大小
+        fontWeight: 'bold',
+        boxShadow: `0 0 10px ${TECH_ACCENT}`, 
+        transition: 'background-color 0.2s, box-shadow 0.2s',
+    },
+    messageBox: {
+        padding: '10px',
+        borderRadius: '6px',
+        marginBottom: '15px',
+        border: '1px solid',
+        fontWeight: 'bold',
+        color: TEXT_COLOR,
+        fontSize: '14px'
+    },
+    suggestionBox: {
+        position: 'absolute',
+        top: '100%', 
+        left: 0,
+        right: 0,
+        zIndex: 10,
+        backgroundColor: BG_SECONDARY,
+        border: `1px solid ${TECH_ACCENT}`,
+        borderRadius: '6px',
+        marginTop: '2px', // 減少邊距
+        maxHeight: '150px', // 減少高度
+        overflowY: 'auto',
+        boxShadow: `0 5px 10px ${BG_PRIMARY}99`,
+    },
+    suggestionItem: {
+        padding: '8px', // 減少 padding
+        cursor: 'pointer',
+        borderBottom: `1px solid ${BG_PRIMARY}`,
+        color: TEXT_COLOR,
+        fontSize: '12px', // 調整字體大小
+    }
 };
 
 export default OrderFormWeb;

@@ -1,36 +1,39 @@
-// File: src/App.jsx (修正為現代米色主題，適用移動設備)
+// File: src/App.jsx (新增「品項主檔管理」切換按鈕 & 手機優化 - 大地色系)
 
 import React, { useState } from 'react';
 import ReportExporter from './components/ReportExporter';
 import OrderFormWeb from './components/OrderFormWeb';
-import MasterItemManager from './components/MasterItemManager'; 
+import MasterItemManager from './components/MasterItemManager'; // 引入新的組件
 import './App.css'; 
 
-// === 新增：米色/大地色系配色 ===
-const ACCENT_COLOR = '#A0522D';  // 赤褐色/強調色
-const BG_PRIMARY = '#FAF0E6';    // 主背景色 (米色)
-const TEXT_COLOR = '#333333';    // 主要文字顏色 (深灰)
-const BG_SECONDARY = '#FFFFFF';  // 次級背景色 (卡片/按鈕)
+const TECH_ACCENT = '#A0522D'; // 土褐色 (Sienna)
+const BG_PRIMARY = '#FFF8E1'; // 乳米色 (Creamy Beige)
+const TEXT_COLOR = '#4E342E'; // 深棕色 (Dark Brown)
+const BG_SECONDARY = '#F5E3C8'; // 淺棕色 (Light Tan)
+
 
 function App() {
+  // 新增一個頁面狀態：'masterItemManager'
   const [currentPage, setCurrentPage] = useState('orderInput'); 
 
   const NavButton = ({ name, targetPage }) => (
     <button
       onClick={() => setCurrentPage(targetPage)}
       style={{
-        padding: '10px 15px',
-        fontSize: '15px', 
-        marginRight: '10px',
+        padding: '8px 10px', // 調整 padding
+        fontSize: '14px', // 調整字體大小
+        marginRight: '0', // 移除間距，改用 gap
         cursor: 'pointer',
-        border: `1px solid ${ACCENT_COLOR}`,
-        // 活躍狀態使用強調色，非活躍使用次級背景色
-        backgroundColor: currentPage === targetPage ? ACCENT_COLOR : BG_SECONDARY,
-        color: currentPage === targetPage ? BG_SECONDARY : TEXT_COLOR,
-        borderRadius: '8px', // 圓潤風格
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        transition: 'all 0.3s ease',
-        fontWeight: '600'
+        border: `1px solid ${TECH_ACCENT}`,
+        backgroundColor: currentPage === targetPage ? TECH_ACCENT : BG_SECONDARY,
+        color: currentPage === targetPage ? BG_PRIMARY : TEXT_COLOR,
+        borderRadius: '4px', // 調整圓角
+        boxShadow: currentPage === targetPage ? `0 0 8px ${TECH_ACCENT}` : 'none', 
+        transition: 'all 0.3s ease-in-out',
+        fontWeight: 'bold',
+        flex: 1, 
+        minWidth: 'auto', // 確保按鈕在小螢幕上可以縮小
+        textAlign: 'center'
       }}
     >
       {name}
@@ -42,45 +45,40 @@ function App() {
         backgroundColor: BG_PRIMARY, 
         color: TEXT_COLOR, 
         minHeight: '100vh', 
-        padding: '20px', 
+        padding: '10px', // 減少整體 padding
         fontFamily: 'Roboto, sans-serif' 
     }}>
       
-      {/* 限制最大寬度為手機尺寸 (約 iPhone 16 Pro Max 寬度: 430px) */}
-      <div style={{ maxWidth: '430px', margin: '0 auto', padding: '15px', backgroundColor: BG_SECONDARY, borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-        
+      <div style={{ maxWidth: '100%', margin: '0 auto' }}> {/* 適應手機寬度 */}
         {/* 標題 */}
-        <h1 style={{ 
-            color: ACCENT_COLOR, 
-            borderBottom: `2px solid ${ACCENT_COLOR}30`, 
-            paddingBottom: '10px', 
-            marginBottom: '20px', 
-            textAlign: 'center',
-            fontSize: '22px' // 調整標題大小以符合移動設備
-        }}>
-            鳳城訂單管理系統
+        <h1 style={{ color: TECH_ACCENT, borderBottom: `2px solid ${TECH_ACCENT}`, paddingBottom: '10px', marginBottom: '15px', textAlign: 'center', fontSize: '22px' }}>
+            鳳城訂單管理系統 (大地版)
         </h1>
         
-        {/* 導航欄 */}
-        <div style={{ 
-            borderBottom: `1px solid #ddd`, 
-            paddingBottom: '15px', 
-            marginBottom: '25px', 
-            textAlign: 'center', 
-            display: 'flex', 
-            flexDirection: 'column', // 改為垂直排列以適應手機
-            gap: '10px' 
-        }}>
-          <NavButton name="外場訂單輸入" targetPage="orderInput" />
-          <NavButton name="訂單報表中心" targetPage="reportExporter" />
-          <NavButton name="品項主檔管理" targetPage="masterItemManager" /> 
+        {/* 導航欄 - 包含品項管理 */}
+        <div style={{ borderBottom: `1px solid ${BG_SECONDARY}`, paddingBottom: '10px', marginBottom: '15px', textAlign: 'center', display: 'flex', gap: '5px' }}> {/* 減少 gap */}
+          <NavButton name="訂單輸入 (A)" targetPage="orderInput" />
+          <NavButton name="報表中心 (B)" targetPage="reportExporter" />
+          <NavButton name="品項管理" targetPage="masterItemManager" /> 
         </div>
 
-        {/* 內容區塊 */}
-        <div style={{ minHeight: '60vh' }}>
-          {currentPage === 'orderInput' && <OrderFormWeb />}
-          {currentPage === 'reportExporter' && <ReportExporter />}
-          {currentPage === 'masterItemManager' && <MasterItemManager />}
+        {/* 內容區塊：確保內容可以全寬顯示 */}
+        <div style={{ display: 'flex', minHeight: '80vh' }}>
+          {currentPage === 'orderInput' && (
+            <div style={{ flex: 1, padding: 0 }}> {/* 移除內邊距 */}
+              <OrderFormWeb />
+            </div>
+          )}
+          {currentPage === 'reportExporter' && (
+            <div style={{ flex: 1, padding: 0 }}>
+              <ReportExporter />
+            </div>
+          )}
+          {currentPage === 'masterItemManager' && (
+            <div style={{ flex: 1, padding: 0 }}>
+              <MasterItemManager />
+            </div>
+          )}
         </div>
       </div>
     </div>

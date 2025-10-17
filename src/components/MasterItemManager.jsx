@@ -1,16 +1,16 @@
-// File: src/components/MasterItemManager.jsx (修正為米色現代風和移動設備寬度)
+// File: src/components/MasterItemManager.jsx (新增刪除功能 - 大地色系優化)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 
-// === 新增：米色/大地色系配色 ===
-const ACCENT_COLOR = '#A0522D';
-const BG_PRIMARY = '#FAF0E6';
-const TEXT_COLOR = '#333333';
-const BG_SECONDARY = '#FFFFFF';
-const SUCCESS_COLOR = '#2E8B57';
-const ERROR_COLOR = '#D9534F'; 
-const WARNING_COLOR = '#F0AD4E'; 
+// 定義大地主題顏色
+const TECH_ACCENT = '#A0522D'; // 土褐色 (Sienna)
+const BG_PRIMARY = '#FFF8E1'; // 乳米色 (Creamy Beige)
+const TEXT_COLOR = '#4E342E'; // 深棕色 (Dark Brown)
+const BG_SECONDARY = '#F5E3C8'; // 淺棕色 (Light Tan)
+const SUCCESS_COLOR = '#689F38'; // 青綠色
+const ERROR_COLOR = '#D32F2F'; // 紅色
+const WARNING_COLOR = '#FF9800'; // 警告色
 
 const MasterItemManager = () => {
     const [items, setItems] = useState([]);
@@ -19,59 +19,55 @@ const MasterItemManager = () => {
     const [message, setMessage] = useState('');
     const [search, setSearch] = useState('');
     
+    // 新增：用於新增品項的狀態
     const [newItemName, setNewItemName] = useState('');
     const [newItemPrice, setNewItemPrice] = useState(0);
 
-    // 現代簡約表格樣式
+    // 大地感表格樣式
     const tableStyle = {
         th: { 
-            borderBottom: `2px solid ${ACCENT_COLOR}`, 
-            padding: '10px 5px', 
+            border: `1px solid ${TECH_ACCENT}55`, 
+            padding: '12px 8px', 
             textAlign: 'left', 
             backgroundColor: BG_SECONDARY, 
-            color: ACCENT_COLOR,
+            color: TECH_ACCENT,
             fontSize: '14px',
-            fontWeight: 'bold'
         },
         td: { 
-            borderBottom: `1px solid #ddd`, 
-            padding: '8px 5px',
+            border: `1px solid ${BG_SECONDARY}`, 
+            padding: '8px',
             color: TEXT_COLOR,
-            backgroundColor: BG_SECONDARY, 
-            fontSize: '14px'
+            backgroundColor: BG_PRIMARY, 
         },
         saveButton: {
             backgroundColor: SUCCESS_COLOR,
-            color: 'white',
+            color: BG_PRIMARY,
             border: 'none',
-            padding: '6px 8px',
+            padding: '8px 12px',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontWeight: '500',
+            fontWeight: 'bold',
             transition: 'opacity 0.2s',
-            marginRight: '5px',
-            fontSize: '12px'
+            marginRight: '8px'
         },
-        deleteButton: { 
+        deleteButton: { // 新增刪除按鈕樣式
             backgroundColor: ERROR_COLOR,
             color: 'white',
             border: 'none',
-            padding: '6px 8px',
+            padding: '8px 12px',
             borderRadius: '4px',
             cursor: 'pointer',
-            fontWeight: '500',
+            fontWeight: 'bold',
             transition: 'opacity 0.2s',
-            fontSize: '12px'
         },
         input: {
             padding: '5px',
-            border: `1px solid #ccc`,
+            border: `1px solid ${TECH_ACCENT}50`,
             borderRadius: '4px',
-            backgroundColor: BG_SECONDARY,
+            backgroundColor: BG_PRIMARY,
             color: TEXT_COLOR,
             width: '100%',
-            boxSizing: 'border-box',
-            fontSize: '14px'
+            boxSizing: 'border-box'
         }
     };
 
@@ -122,7 +118,7 @@ const MasterItemManager = () => {
             .insert({ 
                 name_zh: newItemName.trim(),
                 price: priceValue,
-                is_active: true 
+                is_active: true // 預設新增為啟用狀態
             })
             .select();
 
@@ -133,7 +129,7 @@ const MasterItemManager = () => {
             setMessage(`[成功] 品項 ${data[0].name_zh} 新增完成！`);
             setNewItemName('');
             setNewItemPrice(0);
-            fetchItems(); 
+            fetchItems(); // 重新載入列表
         }
     };
 
@@ -193,7 +189,7 @@ const MasterItemManager = () => {
             setError(`[錯誤] 刪除 ${item.name_zh} 失敗: ${error.message}`);
         } else {
             setMessage(`[成功] 品項 ${item.name_zh} 已刪除。`);
-            fetchItems(); 
+            fetchItems(); // 重新載入列表
         }
     };
 
@@ -202,42 +198,42 @@ const MasterItemManager = () => {
         item.name_zh.toLowerCase().includes(search.toLowerCase())
     );
     
-    // 樣式調整以適應手機
+    // MODIFICATION: 適應手機優化
     const containerStyle = { 
-        padding: '10px', 
+        padding: '15px', 
         maxWidth: '100%', 
         margin: '0 auto', 
-        backgroundColor: BG_SECONDARY, 
+        backgroundColor: BG_PRIMARY, 
         color: TEXT_COLOR 
     };
     const newEntryContainerStyle = {
-        marginBottom: '20px', 
-        padding: '15px', 
-        backgroundColor: BG_PRIMARY, // 使用主背景色作為新增區塊的底色
+        marginBottom: '30px', 
+        padding: '15px', // 減少 padding
+        backgroundColor: BG_SECONDARY, 
         borderRadius: '8px', 
-        border: `1px solid ${ACCENT_COLOR}30`,
+        border: `1px solid ${TECH_ACCENT}55`,
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column', // 手機上垂直堆疊
         gap: '10px',
         alignItems: 'stretch',
     };
     const createButton = {
-        backgroundColor: ACCENT_COLOR,
-        color: 'white',
+        backgroundColor: TECH_ACCENT,
+        color: BG_PRIMARY,
         border: 'none',
-        padding: '10px',
-        borderRadius: '8px',
+        padding: '10px 20px',
+        borderRadius: '4px',
         cursor: 'pointer',
         fontWeight: 'bold',
         transition: 'opacity 0.2s',
-        fontSize: '15px'
+        whiteSpace: 'nowrap'
     };
 
 
     return (
         <div style={containerStyle}>
-            <h2 style={{ fontSize: '20px', marginBottom: '15px', textAlign: 'center', color: ACCENT_COLOR }}>
-                品項主檔管理
+            <h2 style={{ fontSize: '24px', marginBottom: '20px', textAlign: 'center', color: TECH_ACCENT }}>
+                品項主檔管理 (新增/編輯/刪除)
             </h2>
 
             {/* 訊息顯示區 */}
@@ -250,7 +246,7 @@ const MasterItemManager = () => {
 
             {/* 新增品項區塊 (Create) */}
             <div style={newEntryContainerStyle}>
-                <h3 style={{ color: ACCENT_COLOR, margin: 0, fontSize: '16px' }}>+ 新增品項:</h3>
+                <h3 style={{ color: WARNING_COLOR, margin: 0, fontSize: '18px', textAlign: 'center' }}>+ 新增品項</h3>
                 <input
                     type="text"
                     placeholder="中文品名 (必填)"
@@ -276,81 +272,83 @@ const MasterItemManager = () => {
             </div>
             
             {/* 搜尋欄 (Read/Update/Delete) */}
-            <div style={{ marginBottom: '15px' }}>
+            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: BG_SECONDARY, borderRadius: '8px', border: `1px solid ${TECH_ACCENT}55` }}>
                 <input
                     type="text"
                     placeholder="🔍 輸入品項名稱進行過濾..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    style={{ ...tableStyle.input, padding: '10px', fontSize: '15px' }}
+                    style={{ ...tableStyle.input, padding: '10px', fontSize: '16px' }}
                 />
             </div>
             
-            {loading && <p style={{ color: ACCENT_COLOR }}>正在載入品項清單...</p>}
+            {loading && <p style={{ color: TECH_ACCENT }}>正在載入品項清單...</p>}
 
-            {/* 品項列表 (使用 flex/div 模擬表格以適應手機佈局) */}
-             <div style={{ marginBottom: '15px', border: `1px solid #ddd`, borderRadius: '8px', overflow: 'hidden' }}>
-                <div style={{ display: 'flex', backgroundColor: BG_PRIMARY, borderBottom: `2px solid ${ACCENT_COLOR}` }}>
-                    <div style={{ ...tableStyle.th, flex: 3 }}>名稱</div>
-                    <div style={{ ...tableStyle.th, flex: 1.5, textAlign: 'right' }}>價格</div>
-                    <div style={{ ...tableStyle.th, flex: 3.5 }}>操作/狀態</div>
-                </div>
-                
-                {!loading && filteredItems.length === 0 && (
-                     <div style={{padding: '10px', textAlign: 'center', color: TEXT_COLOR}}>找不到符合條件的品項。</div>
-                )}
-
-                {filteredItems.map(item => (
-                    <div key={item.id} style={{ display: 'flex', borderBottom: `1px solid #eee` }}>
-                        
-                        <div style={{ ...tableStyle.td, flex: 3, fontWeight: '500' }}>{item.name_zh}</div>
-                        
-                        <div style={{ ...tableStyle.td, flex: 1.5 }}>
-                            <input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => handleFieldChange(item.id, 'price', e.target.value)}
-                                onBlur={() => handleSave(item)} 
-                                style={{...tableStyle.input, textAlign: 'right'}}
-                                min="0"
-                            />
-                        </div>
-                        
-                        <div style={{ ...tableStyle.td, flex: 3.5, display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                            {/* 狀態切換 */}
-                             <label style={{ display: 'flex', alignItems: 'center', marginBottom: '5px' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={item.is_active}
-                                    onChange={(e) => {
-                                        handleFieldChange(item.id, 'is_active', e.target.checked);
-                                        setTimeout(() => handleSave({...item, is_active: e.target.checked}), 100); 
-                                    }}
-                                    style={{ marginRight: '5px', transform: 'scale(1.1)' }}
-                                />
-                                <span style={{ fontSize: '12px', color: item.is_active ? SUCCESS_COLOR : ERROR_COLOR }}>
-                                    {item.is_active ? '啟用中' : '已禁用'}
-                                </span>
-                            </label>
-
-                            {/* 操作按鈕 */}
-                            <div style={{ display: 'flex', gap: '5px' }}>
-                                <button
-                                    onClick={() => handleSave(item)}
-                                    style={tableStyle.saveButton}
-                                >
-                                    儲存
-                                </button>
-                                <button
-                                    onClick={() => handleDelete(item)}
-                                    style={tableStyle.deleteButton}
-                                >
-                                    刪除
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
+            {/* 品項列表 (Update/Delete) - 手機優化：改為允許水平捲動的 table */}
+            <div style={{ overflowX: 'auto' }}>
+                <table style={{ minWidth: '550px', borderCollapse: 'collapse', tableLayout: 'auto', borderRadius: '8px', overflow: 'hidden' }}>
+                    <thead>
+                        <tr>
+                            <th style={{...tableStyle.th, width: '30%'}}>品項名稱</th>
+                            <th style={{...tableStyle.th, width: '15%'}}>單價 ($)</th>
+                            <th style={{...tableStyle.th, width: '25%'}}>狀態 (啟用/禁用)</th>
+                            <th style={{...tableStyle.th, width: '30%'}}>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {!loading && filteredItems.length === 0 && (
+                             <tr><td colSpan="4" style={{...tableStyle.td, textAlign: 'center', backgroundColor: BG_SECONDARY, color: TECH_ACCENT}}>
+                                 找不到符合條件的品項。
+                             </td></tr>
+                        )}
+                        {filteredItems.map(item => (
+                            <tr key={item.id} style={{ borderBottom: `1px solid ${BG_SECONDARY}` }}>
+                                <td style={tableStyle.td}>
+                                    {item.name_zh}
+                                </td>
+                                <td style={tableStyle.td}>
+                                    <input
+                                        type="number"
+                                        value={item.price}
+                                        onChange={(e) => handleFieldChange(item.id, 'price', e.target.value)}
+                                        onBlur={(e) => handleSave(item)} // 失去焦點時自動保存
+                                        style={{...tableStyle.input, textAlign: 'right'}}
+                                        min="0"
+                                    />
+                                </td>
+                                <td style={tableStyle.td}>
+                                    <label style={{ display: 'flex', alignItems: 'center' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={item.is_active}
+                                            onChange={(e) => {
+                                                handleFieldChange(item.id, 'is_active', e.target.checked);
+                                                // 延遲保存狀態，確保狀態已更新
+                                                setTimeout(() => handleSave({...item, is_active: e.target.checked}), 100); 
+                                            }}
+                                            style={{ marginRight: '8px', transform: 'scale(1.2)' }}
+                                        />
+                                        {item.is_active ? '✅ 啟用中' : '❌ 已禁用'}
+                                    </label>
+                                </td>
+                                <td style={tableStyle.td}>
+                                    <button
+                                        onClick={() => handleSave(item)}
+                                        style={tableStyle.saveButton}
+                                    >
+                                        儲存
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(item)}
+                                        style={tableStyle.deleteButton}
+                                    >
+                                        刪除
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
