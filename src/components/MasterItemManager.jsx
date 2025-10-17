@@ -1,16 +1,16 @@
-// File: src/components/MasterItemManager.jsx (新增刪除功能)
+// File: src/components/MasterItemManager.jsx (新增刪除功能 - 現代簡潔風格)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 
-// 定義科技主題顏色
-const TECH_ACCENT = '#00CED1';
-const BG_PRIMARY = '#121212';
-const TEXT_COLOR = '#E0E0E0';
-const BG_SECONDARY = '#1E1E1E';
-const SUCCESS_COLOR = '#00BFA5';
-const ERROR_COLOR = '#FF4444';
-const WARNING_COLOR = '#FFC107'; // 新增警告色
+// === 定義現代簡潔主題顏色 ===
+const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色
+const BG_PRIMARY = '#1C1C1C';      // 主背景色
+const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色
+const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
+const SUCCESS_COLOR = '#4CAF50';   // 成功色
+const ERROR_COLOR = '#F44336';     // 錯誤色
+const WARNING_COLOR = '#FFB300';   // 警告色
 
 const MasterItemManager = () => {
     const [items, setItems] = useState([]);
@@ -23,75 +23,19 @@ const MasterItemManager = () => {
     const [newItemName, setNewItemName] = useState('');
     const [newItemPrice, setNewItemPrice] = useState(0);
 
-    // 科技感表格樣式
-    const tableStyle = {
-        th: { 
-            border: `1px solid ${TECH_ACCENT}55`, 
-            padding: '12px 8px', 
-            textAlign: 'left', 
-            backgroundColor: BG_SECONDARY, 
-            color: TECH_ACCENT,
-            fontSize: '14px',
-        },
-        td: { 
-            border: `1px solid ${BG_SECONDARY}`, 
-            padding: '8px',
-            color: TEXT_COLOR,
-            backgroundColor: BG_PRIMARY, 
-        },
-        saveButton: {
-            backgroundColor: SUCCESS_COLOR,
-            color: BG_PRIMARY,
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            transition: 'opacity 0.2s',
-            marginRight: '8px'
-        },
-        deleteButton: { // 新增刪除按鈕樣式
-            backgroundColor: ERROR_COLOR,
-            color: 'white',
-            border: 'none',
-            padding: '8px 12px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontWeight: 'bold',
-            transition: 'opacity 0.2s',
-        },
-        input: {
-            padding: '5px',
-            border: `1px solid ${TECH_ACCENT}50`,
-            borderRadius: '4px',
-            backgroundColor: BG_PRIMARY,
-            color: TEXT_COLOR,
-            width: '100%',
-            boxSizing: 'border-box'
-        }
-    };
-
-    const clearMessages = () => {
-        setMessage('');
-        setError(null);
-    };
-
     const fetchItems = useCallback(async () => {
         setLoading(true);
-        clearMessages();
-        
-        let query = supabase
+        const { data, error } = await supabase
             .from('master_items')
-            .select('id, name_zh, price, is_active') 
-            .order('name_zh', { ascending: true });
-        
-        const { data, error } = await query;
+            .select('*')
+            .order('item_name', { ascending: true });
 
         if (error) {
-            console.error('Error fetching master items:', error);
-            setError('無法讀取品項清單: ' + error.message);
+            console.error('Error fetching items:', error);
+            setError('載入品項主檔失敗。');
         } else {
             setItems(data);
+            setError(null);
         }
         setLoading(false);
     }, []);
@@ -100,85 +44,79 @@ const MasterItemManager = () => {
         fetchItems();
     }, [fetchItems]);
 
-    // --- C: 建立品項 ---
-    const handleCreateItem = async () => {
-        clearMessages();
-        
-        if (!newItemName.trim() || newItemPrice === null || isNaN(newItemPrice) || parseFloat(newItemPrice) < 0) {
-            setError('品項名稱或價格無效！請檢查輸入。');
-            return;
-        }
-
-        const priceValue = parseFloat(newItemPrice);
-
-        setMessage(`正在新增品項 ${newItemName}...`);
-        
-        const { data, error } = await supabase
-            .from('master_items')
-            .insert({ 
-                name_zh: newItemName.trim(),
-                price: priceValue,
-                is_active: true // 預設新增為啟用狀態
-            })
-            .select();
-
-        if (error) {
-            console.error('Error creating item:', error);
-            setError(`[錯誤] 新增品項失敗: ${error.message}`);
-        } else {
-            setMessage(`[成功] 品項 ${data[0].name_zh} 新增完成！`);
-            setNewItemName('');
-            setNewItemPrice(0);
-            fetchItems(); // 重新載入列表
-        }
-    };
-
-    // --- U: 更新品項 (價格/狀態) ---
     const handleFieldChange = (id, field, value) => {
         setItems(prevItems =>
             prevItems.map(item =>
                 item.id === id ? { ...item, [field]: value } : item
             )
         );
-        clearMessages();
     };
 
     const handleSave = async (item) => {
-        clearMessages();
-        if (!item.name_zh || item.price === null || isNaN(item.price) || parseFloat(item.price) < 0) {
-            setError('品項名稱或價格無效！');
+        setMessage('');
+        const { id, item_name, item_price, is_active } = item;
+        
+        if (!item_name || item_price === undefined || item_price < 0) {
+            setMessage('錯誤: 品項名稱和價格欄位不能為空，且價格不能小於 0。');
+            setTimeout(() => setMessage(''), 5000);
             return;
         }
 
-        setMessage(`正在更新 ${item.name_zh} ...`);
-        
         const { error } = await supabase
             .from('master_items')
             .update({ 
-                name_zh: item.name_zh, 
-                price: parseFloat(item.price), 
-                is_active: item.is_active 
+                item_name, 
+                item_price: parseFloat(item_price), 
+                is_active 
             })
-            .eq('id', item.id);
+            .eq('id', id);
 
         if (error) {
             console.error('Error updating item:', error);
-            setError(`[錯誤] 更新 ${item.name_zh} 失敗: ${error.message}`);
+            setMessage(`儲存失敗: ${error.message}`);
         } else {
-            setMessage(`[成功] 品項 ${item.name_zh} 更新完成！`);
-            fetchItems();
+            setMessage(`✅ 品項 "${item_name}" 更新成功！`);
+            fetchItems(); // 重新載入以確保狀態同步
         }
+        setTimeout(() => setMessage(''), 5000);
     };
-
-    // --- D: 刪除品項 ---
-    const handleDelete = async (item) => {
-        clearMessages();
-        if (!window.confirm(`確定要永久刪除品項：${item.name_zh} 嗎？此操作不可逆！`)) {
+    
+    const handleAdd = async () => {
+        setMessage('');
+        if (!newItemName || newItemPrice <= 0) {
+            setMessage('錯誤: 新增品項名稱和價格必須填寫，且價格必須大於 0。');
+            setTimeout(() => setMessage(''), 5000);
             return;
         }
         
-        setMessage(`正在刪除 ${item.name_zh} ...`);
+        const newItem = {
+            item_name: newItemName,
+            item_price: parseFloat(newItemPrice),
+            is_active: true
+        };
         
+        const { error } = await supabase
+            .from('master_items')
+            .insert([newItem]);
+
+        if (error) {
+            console.error('Error adding item:', error);
+            setMessage(`新增失敗: ${error.message}`);
+        } else {
+            setMessage(`✅ 品項 "${newItemName}" 新增成功！`);
+            setNewItemName('');
+            setNewItemPrice(0);
+            fetchItems(); // 重新載入
+        }
+        setTimeout(() => setMessage(''), 5000);
+    };
+    
+    const handleDelete = async (item) => {
+        if (!window.confirm(`確定要刪除品項 "${item.item_name}" 嗎？此操作不可逆！`)) {
+            return;
+        }
+
+        setMessage('');
         const { error } = await supabase
             .from('master_items')
             .delete()
@@ -186,148 +124,221 @@ const MasterItemManager = () => {
 
         if (error) {
             console.error('Error deleting item:', error);
-            setError(`[錯誤] 刪除 ${item.name_zh} 失敗: ${error.message}`);
+            setMessage(`刪除失敗: ${error.message}`);
         } else {
-            setMessage(`[成功] 品項 ${item.name_zh} 已刪除。`);
-            fetchItems(); // 重新載入列表
+            setMessage(`✅ 品項 "${item.item_name}" 已成功刪除。`);
+            fetchItems(); // 重新載入
         }
+        setTimeout(() => setMessage(''), 5000);
     };
 
-    // 根據搜尋條件過濾品項
-    const filteredItems = items.filter(item =>
-        item.name_zh.toLowerCase().includes(search.toLowerCase())
+
+    const filteredItems = items.filter(item => 
+        item.item_name.toLowerCase().includes(search.toLowerCase())
     );
-    
-    const containerStyle = { 
-        padding: '20px', 
-        maxWidth: '1000px', 
-        margin: '0 auto', 
-        backgroundColor: BG_PRIMARY, 
-        color: TEXT_COLOR 
-    };
-    const newEntryContainerStyle = {
-        marginBottom: '30px', 
-        padding: '20px', 
-        backgroundColor: BG_SECONDARY, 
-        borderRadius: '8px', 
-        border: `1px solid ${TECH_ACCENT}55`,
-        display: 'flex',
-        gap: '15px',
-        alignItems: 'center',
-    };
-    const createButton = {
-        backgroundColor: TECH_ACCENT,
-        color: BG_PRIMARY,
-        border: 'none',
-        padding: '10px 20px',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontWeight: 'bold',
-        transition: 'opacity 0.2s',
-        whiteSpace: 'nowrap'
+
+    // 現代感表格樣式
+    const tableStyle = {
+        tableContainer: {
+            backgroundColor: BG_SECONDARY, 
+            padding: '20px',
+            borderRadius: '10px', // 增加圓角
+            boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+        },
+        title: {
+            color: ACCENT_COLOR,
+            textAlign: 'center',
+            marginBottom: '30px',
+            fontSize: '24px',
+            borderBottom: `2px solid ${ACCENT_COLOR}30`,
+            paddingBottom: '10px'
+        },
+        table: {
+            width: '100%',
+            borderCollapse: 'separate', // 允許 border-spacing
+            borderSpacing: '0 10px', // 增加行間距
+        },
+        th: { 
+            border: 'none', // 移除邊框
+            padding: '12px 15px', 
+            textAlign: 'left', 
+            backgroundColor: BG_SECONDARY, 
+            color: ACCENT_COLOR, // 使用強調色
+            fontSize: '15px',
+            fontWeight: '600',
+        },
+        tr: {
+            backgroundColor: BG_PRIMARY, // 行的背景
+            borderRadius: '8px', // 行的圓角
+            boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+        },
+        td: { 
+            border: 'none', // 移除邊框
+            padding: '12px 15px',
+            color: TEXT_COLOR,
+            backgroundColor: BG_PRIMARY, 
+        },
+        // 確保第一和最後一列有圓角
+        tdFirst: { borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px' },
+        tdLast: { borderTopRightRadius: '8px', borderBottomRightRadius: '8px' },
+
+        saveButton: {
+            backgroundColor: SUCCESS_COLOR,
+            color: 'white', 
+            border: 'none',
+            padding: '8px 15px',
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            transition: 'all 0.2s',
+            marginRight: '8px',
+        },
+        deleteButton: { 
+            backgroundColor: ERROR_COLOR,
+            color: 'white',
+            border: 'none',
+            padding: '8px 15px',
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            transition: 'all 0.2s',
+        },
+        input: {
+            padding: '8px 10px',
+            border: `1px solid ${BG_SECONDARY}`, // 柔和邊框
+            borderRadius: '6px', 
+            backgroundColor: BG_SECONDARY,
+            color: TEXT_COLOR,
+            width: '100%',
+            boxSizing: 'border-box',
+        },
+        searchContainer: {
+            display: 'flex',
+            marginBottom: '20px',
+            gap: '10px',
+        },
+        addButton: {
+            backgroundColor: ACCENT_COLOR,
+            color: 'white',
+            border: 'none',
+            padding: '10px 20px',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            transition: 'all 0.2s',
+            boxShadow: `0 2px 10px ${ACCENT_COLOR}50`,
+        },
+        messageBox: (type) => ({
+            padding: '15px',
+            borderRadius: '8px', // 圓角
+            marginBottom: '20px',
+            border: `1px solid ${type === 'error' ? ERROR_COLOR : SUCCESS_COLOR}`, 
+            fontWeight: 'bold',
+            color: TEXT_COLOR,
+            backgroundColor: type === 'error' ? `${ERROR_COLOR}20` : `${SUCCESS_COLOR}20`,
+        }),
     };
 
+    if (loading) return <div style={{ color: TEXT_COLOR, textAlign: 'center' }}>載入中...</div>;
 
     return (
-        <div style={containerStyle}>
-            <h2 style={{ fontSize: '28px', marginBottom: '20px', textAlign: 'center', color: TECH_ACCENT }}>
-                品項主檔管理 (新增/編輯/刪除)
-            </h2>
-
-            {/* 訊息顯示區 */}
-            {message && !error && (
-                <p style={{ color: SUCCESS_COLOR, fontWeight: 'bold' }}>{message}</p>
+        <div style={tableStyle.tableContainer}>
+            <h2 style={tableStyle.title}>品項主檔管理</h2>
+            
+            {message && (
+                <div style={tableStyle.messageBox(message.includes('錯誤') ? 'error' : 'success')}>
+                    {message}
+                </div>
             )}
-            {error && (
-                <p style={{ color: ERROR_COLOR, fontWeight: 'bold' }}>{error}</p>
-            )}
+            
+            {error && <div style={tableStyle.messageBox('error')}>{error}</div>}
 
-            {/* 新增品項區塊 (Create) */}
-            <div style={newEntryContainerStyle}>
-                <h3 style={{ color: WARNING_COLOR, margin: 0, fontSize: '18px', whiteSpace: 'nowrap' }}>+ 新增品項:</h3>
+            {/* 新增品項區塊 */}
+            <div style={{ ...tableStyle.searchContainer, marginBottom: '30px', borderBottom: `1px solid ${BG_PRIMARY}`, paddingBottom: '20px' }}>
                 <input
                     type="text"
-                    placeholder="中文品名 (必填)"
+                    placeholder="新增品項名稱"
                     value={newItemName}
-                    onChange={(e) => { setNewItemName(e.target.value); clearMessages(); }}
+                    onChange={(e) => setNewItemName(e.target.value)}
                     style={{ ...tableStyle.input, flex: 2 }}
                 />
                 <input
                     type="number"
-                    placeholder="價格 (必填)"
-                    value={newItemPrice === 0 ? '' : newItemPrice}
-                    onChange={(e) => { setNewItemPrice(e.target.value); clearMessages(); }}
-                    style={{ ...tableStyle.input, flex: 1, textAlign: 'right' }}
                     min="0"
+                    placeholder="價格"
+                    value={newItemPrice}
+                    onChange={(e) => setNewItemPrice(e.target.value)}
+                    style={{ ...tableStyle.input, flex: 1 }}
                 />
-                <button
-                    onClick={handleCreateItem}
-                    style={createButton}
-                    disabled={!newItemName.trim() || isNaN(newItemPrice) || parseFloat(newItemPrice) < 0}
+                <button 
+                    onClick={handleAdd}
+                    style={tableStyle.addButton}
                 >
-                    新增
+                    + 新增品項
                 </button>
             </div>
             
-            {/* 搜尋欄 (Read/Update/Delete) */}
-            <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: BG_SECONDARY, borderRadius: '8px', border: `1px solid ${TECH_ACCENT}55` }}>
+            {/* 搜尋欄位 */}
+            <div style={tableStyle.searchContainer}>
                 <input
                     type="text"
-                    placeholder="🔍 輸入品項名稱進行過濾..."
+                    placeholder="🔎 搜尋品項名稱..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    style={{ ...tableStyle.input, padding: '10px', fontSize: '16px' }}
+                    style={{ ...tableStyle.input, flex: 1 }}
                 />
             </div>
             
-            {loading && <p style={{ color: TECH_ACCENT }}>正在載入品項清單...</p>}
-
-            {/* 品項列表 (Update/Delete) */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', borderRadius: '8px', overflow: 'hidden' }}>
+            {/* 品項列表 */}
+            <table style={tableStyle.table}>
                 <thead>
                     <tr>
-                        <th style={{...tableStyle.th, width: '35%'}}>品項名稱</th>
-                        <th style={{...tableStyle.th, width: '15%'}}>單價 ($)</th>
-                        <th style={{...tableStyle.th, width: '15%'}}>狀態 (啟用/禁用)</th>
-                        <th style={{...tableStyle.th, width: '20%'}}>操作</th>
+                        <th style={{ ...tableStyle.th, ...tableStyle.tdFirst }}>名稱</th>
+                        <th style={tableStyle.th}>價格</th>
+                        <th style={tableStyle.th}>狀態</th>
+                        <th style={{ ...tableStyle.th, ...tableStyle.tdLast, width: '200px' }}>操作</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {!loading && filteredItems.length === 0 && (
-                         <tr><td colSpan="4" style={{...tableStyle.td, textAlign: 'center', backgroundColor: BG_SECONDARY, color: TECH_ACCENT}}>
-                             找不到符合條件的品項。
-                         </td></tr>
-                    )}
                     {filteredItems.map(item => (
-                        <tr key={item.id} style={{ borderBottom: `1px solid ${BG_SECONDARY}` }}>
-                            <td style={tableStyle.td}>
-                                {item.name_zh}
+                        <tr key={item.id} style={tableStyle.tr}>
+                            {/* 品項名稱 */}
+                            <td style={{ ...tableStyle.td, ...tableStyle.tdFirst }}>
+                                <input
+                                    type="text"
+                                    value={item.item_name}
+                                    onChange={(e) => handleFieldChange(item.id, 'item_name', e.target.value)}
+                                    style={tableStyle.input}
+                                />
                             </td>
+                            {/* 價格 */}
                             <td style={tableStyle.td}>
                                 <input
                                     type="number"
-                                    value={item.price}
-                                    onChange={(e) => handleFieldChange(item.id, 'price', e.target.value)}
-                                    onBlur={(e) => handleSave(item)} // 失去焦點時自動保存
-                                    style={{...tableStyle.input, textAlign: 'right'}}
                                     min="0"
+                                    value={item.item_price}
+                                    onChange={(e) => handleFieldChange(item.id, 'item_price', e.target.value)}
+                                    style={tableStyle.input}
                                 />
                             </td>
+                            {/* 狀態 */}
                             <td style={tableStyle.td}>
-                                <label style={{ display: 'flex', alignItems: 'center' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                                     <input
                                         type="checkbox"
                                         checked={item.is_active}
                                         onChange={(e) => {
                                             handleFieldChange(item.id, 'is_active', e.target.checked);
-                                            setTimeout(() => handleSave({...item, is_active: e.target.checked}), 100); // 延遲保存狀態
+                                            // 延遲保存狀態
+                                            setTimeout(() => handleSave({...item, is_active: e.target.checked}), 100); 
                                         }}
                                         style={{ marginRight: '8px', transform: 'scale(1.2)' }}
                                     />
                                     {item.is_active ? '✅ 啟用中' : '❌ 已禁用'}
                                 </label>
                             </td>
-                            <td style={tableStyle.td}>
+                            {/* 操作 */}
+                            <td style={{ ...tableStyle.td, ...tableStyle.tdLast }}>
                                 <button
                                     onClick={() => handleSave(item)}
                                     style={tableStyle.saveButton}

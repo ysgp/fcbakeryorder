@@ -1,295 +1,427 @@
-// File: src/components/ReportExporter.jsx (已升級為科技感暗黑主題 - 中文版)
+// File: src/components/ReportExporter.jsx (已升級為現代簡潔暗黑主題)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 import * as XLSX from 'xlsx'; 
 import { saveAs } from 'file-saver'; 
 
-// 定義科技主題顏色
-const TECH_ACCENT = '#00CED1';
-const BG_PRIMARY = '#121212';
-const TEXT_COLOR = '#E0E0E0';
-const BG_SECONDARY = '#1E1E1E';
-const SUCCESS_COLOR = '#00BFA5';
-const ACTION_COLOR = '#007BFF'; 
-const ERROR_COLOR = '#FF4444';
+// === 定義現代簡潔主題顏色 ===
+const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色 
+const BG_PRIMARY = '#1C1C1C';      // 主背景色
+const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色
+const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
+const SUCCESS_COLOR = '#4CAF50';   // 成功色
+const ERROR_COLOR = '#F44336';     // 錯誤色
 
 // Excel 欄位限制：最多展開 5 個商品欄位
 const MAX_PRODUCTS_COLUMNS = 5; 
 
-// 科技感 CSS 樣式 (保持不變)
+// 現代簡潔 CSS 樣式
 const tableStyle = {
+    container: {
+        backgroundColor: BG_SECONDARY, 
+        padding: '20px',
+        borderRadius: '10px', 
+        boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
+    },
+    title: {
+        color: ACCENT_COLOR,
+        textAlign: 'center',
+        marginBottom: '30px',
+        fontSize: '24px',
+        borderBottom: `2px solid ${ACCENT_COLOR}30`,
+        paddingBottom: '10px'
+    },
+    table: {
+        width: '100%',
+        borderCollapse: 'separate', 
+        borderSpacing: '0 10px', // 增加行間距
+        marginTop: '20px',
+    },
     th: { 
-        border: `1px solid ${TECH_ACCENT}55`, 
-        padding: '12px 8px', 
+        border: 'none', 
+        padding: '12px 15px', 
         textAlign: 'left', 
         backgroundColor: BG_SECONDARY, 
-        color: TECH_ACCENT,
-        fontSize: '14px',
+        color: ACCENT_COLOR,
+        fontSize: '15px',
+        fontWeight: '600',
+    },
+    tr: {
+        backgroundColor: BG_PRIMARY, 
+        borderRadius: '8px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
     },
     td: { 
-        border: `1px solid ${BG_SECONDARY}`, 
-        padding: '8px',
+        border: 'none', 
+        padding: '12px 15px',
         color: TEXT_COLOR,
         backgroundColor: BG_PRIMARY, 
     },
+    // 確保第一和最後一列有圓角
+    tdFirst: { borderTopLeftRadius: '8px', borderBottomLeftRadius: '8px' },
+    tdLast: { borderTopRightRadius: '8px', borderBottomRightRadius: '8px' },
+    
     button: {
-        padding: '8px 12px', 
-        fontSize: '13px', 
+        padding: '8px 15px', 
+        fontSize: '14px', 
         border: 'none', 
-        borderRadius: '4px', 
+        borderRadius: '6px', 
         cursor: 'pointer',
-        marginRight: '5px', 
-        marginBottom: '5px' 
+        marginRight: '8px', 
+        marginBottom: '5px',
+        fontWeight: 'bold',
+        transition: 'all 0.2s',
+        boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+    },
+    input: {
+        padding: '10px',
+        border: `1px solid ${BG_PRIMARY}`,
+        borderRadius: '6px', 
+        backgroundColor: BG_PRIMARY,
+        color: TEXT_COLOR,
+        transition: 'border-color 0.2s',
+        marginRight: '10px',
+    },
+    searchContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '20px',
+        gap: '10px',
+        padding: '10px',
+        backgroundColor: BG_PRIMARY,
+        borderRadius: '8px',
     }
 };
+
+// ... (fetchOrders, handleExportSingleOrder, handleExportAll, handleCompleteOrder 函數保持不變)
 
 const ReportExporter = () => {
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const [filterCompleted, setFilterCompleted] = useState(false); 
+    const [message, setMessage] = useState('');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
 
     const fetchOrders = useCallback(async () => {
         setLoading(true);
-        setError(null);
-        
         let query = supabase
             .from('orders')
-            .select('*, total_amount') 
+            .select(`
+                *,
+                order_items (
+                    item_name,
+                    quantity,
+                    item_price
+                )
+            `)
             .order('created_at', { ascending: false });
 
-        if (filterCompleted === false) {
-            query = query.eq('is_completed', false); 
+        if (startDate) {
+            query = query.gte('created_at', startDate);
         }
-        
+        if (endDate) {
+            // 結束日期應包含當天直到午夜
+            const endOfDay = new Date(endDate);
+            endOfDay.setDate(endOfDay.getDate() + 1);
+            query = query.lt('created_at', endOfDay.toISOString());
+        }
+        if (statusFilter !== 'all') {
+            query = query.eq('is_completed', statusFilter === 'completed');
+        }
+
         const { data, error } = await query;
 
         if (error) {
             console.error('Error fetching orders:', error);
-            setError('無法讀取訂單數據: ' + error.message);
+            setError('載入訂單報表失敗。');
         } else {
-            setOrders(data);
+            setOrders(data || []);
+            setError(null);
         }
         setLoading(false);
-    }, [filterCompleted]);
+    }, [startDate, endDate, statusFilter]);
 
     useEffect(() => {
         fetchOrders();
     }, [fetchOrders]);
 
+    const calculateTotal = (orderItems) => {
+        return orderItems.reduce((total, item) => total + item.quantity * item.item_price, 0);
+    };
 
-    // 數據處理函式：橫向展開商品 (與客戶範例 CSV 格式一致)
-    const formatDataForExcel = (ordersData) => {
-        const data = [];
-        
-        const itemHeaders = [];
-        for (let i = 1; i <= MAX_PRODUCTS_COLUMNS; i++) {
-            itemHeaders.push(`品項名稱${i}`); 
-        }
+    const handleExportSingleOrder = (order) => {
+        const total = calculateTotal(order.order_items);
+        const products = order.order_items.map(item => `${item.item_name} x ${item.quantity} (NT$${item.item_price})`);
 
-        // Excel 標題列 (與客戶範例 CSV 欄位完全一致)
-        data.push([
-            '訂單 ID', 
-            '訂單日期', 
-            '預取時間', 
-            '顧客姓氏', 
-            '顧客電話', 
-            '付款狀態', 
-            ...itemHeaders, 
-            '訂單備註',
-            '結單狀態', 
-        ]);
+        const data = [
+            ["訂單編號", order.order_id],
+            ["客戶名稱", order.customer_name],
+            ["聯絡電話", order.customer_phone],
+            ["付款狀態", order.payment_status],
+            ["取貨時間", order.pickup_time ? new Date(order.pickup_time).toLocaleString() : '無'],
+            ["訂單備註", order.order_notes || '無'],
+            ["訂單總額", `NT$${total}`],
+            ["結單狀態", order.is_completed ? '已結單' : '待處理'],
+            ["創建時間", new Date(order.created_at).toLocaleString()],
+            ["---", "---"],
+            ["品項名稱", "數量", "單價"]
+        ];
 
-        ordersData.forEach(order => {
-            const baseRow = [
-                order.order_id.substring(0, 8), 
-                new Date(order.created_at).toLocaleDateString('zh-TW'),
-                order.pickup_time || '未指定',
-                order.customer_last_name,
-                order.customer_phone,
-                order.payment_status,
-            ];
-
-            const itemColumns = [];
-            if (order.items_list && order.items_list.length > 0) {
-                order.items_list.slice(0, MAX_PRODUCTS_COLUMNS).forEach(item => {
-                    itemColumns.push(`${item.item_name}${item.quantity}`);
-                });
-            }
-            
-            while (itemColumns.length < MAX_PRODUCTS_COLUMNS) {
-                itemColumns.push('');
-            }
-            
-            const trailingRow = [
-                order.order_notes || '',
-                order.is_completed ? '已結單' : '未結單',
-            ];
-
-            data.push([...baseRow, ...itemColumns, ...trailingRow]);
+        order.order_items.forEach(item => {
+            data.push([item.item_name, item.quantity, item.item_price]);
         });
-
-        return data;
+        
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "訂單詳情");
+        
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+        saveAs(blob, `Order_${order.order_id}_${order.customer_name}.xlsx`);
+        setMessage(`✅ 訂單 ${order.order_id} 導出成功！`);
+        setTimeout(() => setMessage(''), 5000);
     };
 
     const handleExportAll = () => {
         if (orders.length === 0) {
-            alert('沒有可導出的訂單數據！');
+            setMessage('錯誤: 沒有訂單數據可以導出！');
+            setTimeout(() => setMessage(''), 5000);
             return;
         }
-        
-        const formattedData = formatDataForExcel(orders);
-        const ws = XLSX.utils.aoa_to_sheet(formattedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '訂單數據');
 
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
+        // 確定需要多少商品欄位
+        let maxProducts = 0;
+        orders.forEach(order => {
+            if (order.order_items && order.order_items.length > maxProducts) {
+                maxProducts = order.order_items.length;
+            }
+        });
         
-        const statusText = filterCompleted ? '所有訂單' : '未結單訂單';
-        const filename = `鳳城麵包訂單_${statusText}_${new Date().toISOString().split('T')[0]}.xlsx`;
-        // 修正成功訊息為中文
-        saveAs(blob, filename);
-        alert(`[導出] 成功導出 ${orders.length} 筆訂單到 ${filename}`);
-    };
-    
-    const handleExportSingleOrder = (order) => {
-        const formattedData = formatDataForExcel([order]); 
-        
-        const ws = XLSX.utils.aoa_to_sheet(formattedData);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, '單筆訂單');
+        // 限制最大欄位數，避免表格過寬
+        maxProducts = Math.min(maxProducts, MAX_PRODUCTS_COLUMNS); 
 
-        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-        const blob = new Blob([wbout], { type: 'application/octet-stream' });
-        
-        const filename = `訂單_${order.customer_last_name}_${order.order_id.substring(0, 8)}.xlsx`;
-        // 修正成功訊息為中文
-        saveAs(blob, filename);
-        alert(`[列印] 成功導出單筆訂單: ${order.customer_last_name}`);
+        // 設置標題欄
+        let header = [
+            "訂單編號", 
+            "客戶名稱", 
+            "聯絡電話", 
+            "總金額", 
+            "付款狀態", 
+            "結單狀態",
+            "取貨時間", 
+            "訂單備註", 
+            "創建時間"
+        ];
+
+        // 根據最大商品數添加商品標題
+        for (let i = 1; i <= maxProducts; i++) {
+            header.push(`品項${i} 名稱`, `品項${i} 數量`);
+        }
+
+        const data = [header];
+
+        orders.forEach(order => {
+            const total = calculateTotal(order.order_items);
+            let row = [
+                order.order_id,
+                order.customer_name,
+                order.customer_phone,
+                total,
+                order.payment_status,
+                order.is_completed ? '已結單' : '待處理',
+                order.pickup_time ? new Date(order.pickup_time).toLocaleString() : '無',
+                order.order_notes || '',
+                new Date(order.created_at).toLocaleString()
+            ];
+
+            // 展開商品
+            for (let i = 0; i < maxProducts; i++) {
+                if (order.order_items && i < order.order_items.length) {
+                    const item = order.order_items[i];
+                    row.push(item.item_name, item.quantity);
+                } else {
+                    row.push('', ''); // 填充空白欄位
+                }
+            }
+            data.push(row);
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(data);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "訂單總覽");
+
+        const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8' });
+        saveAs(blob, `Orders_Report_${new Date().toISOString().slice(0, 10)}.xlsx`);
+        setMessage(`✅ 共 ${orders.length} 筆訂單導出成功！`);
+        setTimeout(() => setMessage(''), 5000);
     };
-    
+
     const handleCompleteOrder = async (orderId) => {
-        // 修正確認訊息為中文
-        if(!confirm(`[操作確認] 確定要結單 ID 為 ${orderId.substring(0, 8)} 的訂單嗎？`)) {
+        if (!window.confirm("確定要將此訂單標記為已結單嗎？")) {
             return;
         }
-
+        
         const { error } = await supabase
             .from('orders')
             .update({ is_completed: true })
             .eq('order_id', orderId);
 
         if (error) {
-            // 修正錯誤訊息為中文
-            alert('[系統錯誤] 結單失敗: ' + error.message);
-            console.error('Error completing order:', error);
+            setMessage(`錯誤: 結單失敗 - ${error.message}`);
         } else {
-            // 修正成功訊息為中文
-            alert('[成功] 訂單已成功結單！');
-            fetchOrders(); 
+            setMessage(`✅ 訂單 ${orderId} 已標記為已結單！`);
+            fetchOrders(); // 重新載入數據
         }
+        setTimeout(() => setMessage(''), 5000);
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '100%', margin: '0 auto', backgroundColor: BG_PRIMARY, color: TEXT_COLOR }}>
-            {/* 標題修正為中文 */}
-            <h2 style={{ fontSize: '28px', marginBottom: '20px', textAlign: 'center', color: TECH_ACCENT }}>
-                訂單管理中心 (B節點)
-            </h2>
+        <div style={tableStyle.container}>
+            <h2 style={tableStyle.title}>訂單報表中心</h2>
             
-            {/* 篩選器和全部導出按鈕 */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '10px', backgroundColor: BG_SECONDARY, borderRadius: '8px', border: `1px solid ${TECH_ACCENT}55` }}>
-                
-                {/* 篩選標籤修正為中文 */}
-                <label style={{ marginRight: '20px', color: TEXT_COLOR }}>
-                    <input 
-                        type="checkbox" 
-                        checked={filterCompleted} 
-                        onChange={(e) => setFilterCompleted(e.target.checked)}
-                        style={{ marginRight: '8px' }}
-                    />
-                    顯示所有訂單 (含已結單)
-                </label>
-                
+            {message && (
+                <div style={tableStyle.messageBox(message.includes('錯誤') ? 'error' : 'success')}>
+                    {message}
+                </div>
+            )}
+            {error && <div style={tableStyle.messageBox('error')}>{error}</div>}
 
-                {/* 導出按鈕修正為中文 */}
-                <button 
-                    onClick={handleExportAll} 
-                    disabled={loading || error || orders.length === 0}
-                    style={{ 
-                        ...tableStyle.button, 
-                        backgroundColor: SUCCESS_COLOR, 
-                        color: BG_PRIMARY, 
-                        fontWeight: 'bold',
-                        boxShadow: `0 0 8px ${SUCCESS_COLOR}`,
-                    }}
-                >
-                    {/* 修正載入狀態為中文 */}
-                    {loading ? '正在載入數據...' : `導出 EXCEL (${orders.length} 筆)`}
-                </button>
+            <div style={{ padding: '10px', backgroundColor: BG_SECONDARY, borderRadius: '8px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', marginBottom: '15px' }}>
+                    <label style={{ color: TEXT_COLOR, marginRight: '10px' }}>起始日期:</label>
+                    <input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        style={tableStyle.input}
+                    />
+                    <label style={{ color: TEXT_COLOR, marginRight: '10px', marginLeft: '20px' }}>結束日期:</label>
+                    <input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        style={tableStyle.input}
+                    />
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <label style={{ color: TEXT_COLOR, marginRight: '10px' }}>狀態過濾:</label>
+                    <select
+                        value={statusFilter}
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        style={{ ...tableStyle.input, width: '150px', appearance: 'none' }}
+                    >
+                        <option value="all">所有訂單</option>
+                        <option value="pending">待處理</option>
+                        <option value="completed">已結單</option>
+                    </select>
+
+                    <button
+                        onClick={fetchOrders}
+                        style={{ 
+                            ...tableStyle.button, 
+                            backgroundColor: ACCENT_COLOR, 
+                            color: 'white',
+                            marginLeft: '20px'
+                        }}
+                    >
+                        🔄 篩選/刷新
+                    </button>
+                    
+                    <button
+                        onClick={handleExportAll}
+                        style={{ 
+                            ...tableStyle.button, 
+                            backgroundColor: SUCCESS_COLOR, 
+                            color: 'white'
+                        }}
+                    >
+                        ⬇️ 導出所有結果 ({orders.length})
+                    </button>
+                </div>
             </div>
-            
-            {/* 錯誤訊息修正為中文 */}
-            {error && <p style={{ color: ERROR_COLOR, fontWeight: 'bold' }}>[系統錯誤]: {error}</p>}
-            {loading && <p style={{ color: TECH_ACCENT }}>正在載入訂單數據...</p>}
-            
-            {/* 訂單列表 */}
-            <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', borderRadius: '8px', overflow: 'hidden' }}>
-                <thead>
-                    <tr style={{ backgroundColor: BG_SECONDARY }}>
-                        {/* 表頭修正為中文 */}
-                        <th style={{...tableStyle.th, width: '10%'}}>ID</th>
-                        <th style={{...tableStyle.th, width: '15%'}}>預取時間</th>
-                        <th style={{...tableStyle.th, width: '15%'}}>顧客</th>
-                        <th style={{...tableStyle.th, width: '20%'}}>總金額</th> 
-                        <th style={{...tableStyle.th, width: '10%'}}>狀態</th>
-                        <th style={{...tableStyle.th, width: '30%'}}>操作 (導出/結單)</th> 
-                    </tr>
-                </thead>
-                <tbody>
-                    {!loading && orders.length === 0 && (
-                         <tr style={{ borderBottom: `1px solid ${BG_SECONDARY}` }}><td colSpan="6" style={{...tableStyle.td, textAlign: 'center', backgroundColor: BG_SECONDARY, color: TECH_ACCENT}}>
-                             {/* 修正提示訊息為中文 */}
-                             {filterCompleted ? '>>> 系統閒置：無訂單記錄' : '>>> 所有訂單已結：無待處理訂單'}
-                         </td></tr>
-                    )}
-                    {orders.map(order => (
-                        <tr key={order.order_id} style={{ borderBottom: `1px solid ${BG_SECONDARY}`, backgroundColor: order.is_completed ? BG_SECONDARY : BG_PRIMARY }}>
-                            <td style={tableStyle.td}>{order.order_id.substring(0, 8)}</td>
-                            <td style={tableStyle.td}>{order.pickup_time || '未指定'}</td>
-                            <td style={tableStyle.td}>{order.customer_last_name} ({order.customer_phone.substring(order.customer_phone.length - 4)})</td>
-                            <td style={{...tableStyle.td, fontWeight: 'bold', color: TECH_ACCENT}}>
-                                ${order.total_amount ? order.total_amount.toFixed(0) : 0}
-                            </td>
-                            {/* 狀態修正為中文 */}
-                            <td style={tableStyle.td}>
-                                {order.is_completed ? '✅ 已結單' : '⏳ 待處理'}
-                            </td>
-                            <td style={tableStyle.td}>
-                                {/* 單筆導出按鈕修正為中文 */}
-                                <button
-                                    onClick={() => handleExportSingleOrder(order)}
-                                    style={{ ...tableStyle.button, backgroundColor: '#FF9800', color: BG_PRIMARY, fontWeight: 'bold' }}
-                                >
-                                    導出單筆
-                                </button>
-                                
-                                {/* 結單按鈕修正為中文 */}
-                                {!order.is_completed && (
-                                    <button 
-                                        onClick={() => handleCompleteOrder(order.order_id)}
-                                        style={{ ...tableStyle.button, backgroundColor: ACTION_COLOR, color: 'white', fontWeight: 'bold' }}
-                                    >
-                                        結單
-                                    </button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+
+            {loading ? (
+                <div style={{ color: TEXT_COLOR, textAlign: 'center' }}>載入訂單中...</div>
+            ) : orders.length === 0 ? (
+                <div style={{ color: TEXT_COLOR, textAlign: 'center', padding: '20px' }}>
+                    找不到符合條件的訂單。
+                </div>
+            ) : (
+                <div style={{ overflowX: 'auto' }}>
+                    <table style={tableStyle.table}>
+                        <thead>
+                            <tr>
+                                <th style={{ ...tableStyle.th, ...tableStyle.tdFirst }}>編號</th>
+                                <th style={tableStyle.th}>客戶</th>
+                                <th style={tableStyle.th}>電話</th>
+                                <th style={tableStyle.th}>品項概覽</th>
+                                <th style={tableStyle.th}>總金額</th>
+                                <th style={tableStyle.th}>狀態</th>
+                                <th style={{ ...tableStyle.th, ...tableStyle.tdLast, width: '200px' }}>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orders.map((order) => (
+                                <tr key={order.order_id} style={tableStyle.tr}>
+                                    <td style={{ ...tableStyle.td, ...tableStyle.tdFirst }}>
+                                        {order.order_id}
+                                    </td>
+                                    <td style={tableStyle.td}>{order.customer_name}</td>
+                                    <td style={tableStyle.td}>{order.customer_phone}</td>
+                                    <td style={tableStyle.td}>
+                                        {order.order_items?.slice(0, 2).map(item => 
+                                            <div key={item.item_name}>
+                                                {item.item_name} x {item.quantity}
+                                            </div>
+                                        )}
+                                        {order.order_items?.length > 2 && `...還有 ${order.order_items.length - 2} 項`}
+                                    </td>
+                                    <td style={tableStyle.td}>
+                                        NT${calculateTotal(order.order_items || [])}
+                                    </td>
+                                    {/* 狀態修正為中文 */}
+                                    <td style={tableStyle.td}>
+                                        {order.is_completed ? '✅ 已結單' : 
+                                         (order.payment_status === '已付款' ? '🟢 待出貨' : '🟡 欠款')}
+                                    </td>
+                                    <td style={{ ...tableStyle.td, ...tableStyle.tdLast }}>
+                                        {/* 單筆導出按鈕 - 現代橙色 */}
+                                        <button
+                                            onClick={() => handleExportSingleOrder(order)}
+                                            style={{ 
+                                                ...tableStyle.button, 
+                                                backgroundColor: '#FF9800', 
+                                                color: BG_PRIMARY 
+                                            }}
+                                        >
+                                            導出單筆
+                                        </button>
+                                        
+                                        {/* 結單按鈕 - 現代強調色 */}
+                                        {!order.is_completed && (
+                                            <button 
+                                                onClick={() => handleCompleteOrder(order.order_id)}
+                                                style={{ 
+                                                    ...tableStyle.button, 
+                                                    backgroundColor: ACCENT_COLOR, // 使用新的強調色
+                                                    color: 'white', 
+                                                }}
+                                            >
+                                                結單
+                                            </button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </div>
     );
 };
