@@ -1,16 +1,17 @@
-// File: src/components/MasterItemManager.jsx (新增刪除功能 - 現代簡潔風格)
+// File: src/components/MasterItemManager.jsx (已修正 import useCallback)
 
+// 請注意：此處已修正 import 語句，確保 useCallback 可用。
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 
 // === 定義現代簡潔主題顏色 ===
-const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色
-const BG_PRIMARY = '#1C1C1C';      // 主背景色
-const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色
-const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
-const SUCCESS_COLOR = '#4CAF50';   // 成功色
-const ERROR_COLOR = '#F44336';     // 錯誤色
-const WARNING_COLOR = '#FFB300';   // 警告色
+const ACCENT_COLOR = '#6C63FF';    
+const BG_PRIMARY = '#1C1C1C';      
+const TEXT_COLOR = '#F0F0F0';      
+const BG_SECONDARY = '#2C2C2C';    
+const SUCCESS_COLOR = '#4CAF50';   
+const ERROR_COLOR = '#F44336';     
+const WARNING_COLOR = '#FFB300';   
 
 const MasterItemManager = () => {
     const [items, setItems] = useState([]);
@@ -76,7 +77,7 @@ const MasterItemManager = () => {
             setMessage(`儲存失敗: ${error.message}`);
         } else {
             setMessage(`✅ 品項 "${item_name}" 更新成功！`);
-            fetchItems(); // 重新載入以確保狀態同步
+            fetchItems(); 
         }
         setTimeout(() => setMessage(''), 5000);
     };
@@ -106,7 +107,7 @@ const MasterItemManager = () => {
             setMessage(`✅ 品項 "${newItemName}" 新增成功！`);
             setNewItemName('');
             setNewItemPrice(0);
-            fetchItems(); // 重新載入
+            fetchItems(); 
         }
         setTimeout(() => setMessage(''), 5000);
     };
@@ -127,7 +128,7 @@ const MasterItemManager = () => {
             setMessage(`刪除失敗: ${error.message}`);
         } else {
             setMessage(`✅ 品項 "${item.item_name}" 已成功刪除。`);
-            fetchItems(); // 重新載入
+            fetchItems(); 
         }
         setTimeout(() => setMessage(''), 5000);
     };
@@ -142,7 +143,7 @@ const MasterItemManager = () => {
         tableContainer: {
             backgroundColor: BG_SECONDARY, 
             padding: '20px',
-            borderRadius: '10px', // 增加圓角
+            borderRadius: '10px', 
             boxShadow: '0 4px 15px rgba(0,0,0,0.4)',
         },
         title: {
@@ -155,25 +156,25 @@ const MasterItemManager = () => {
         },
         table: {
             width: '100%',
-            borderCollapse: 'separate', // 允許 border-spacing
-            borderSpacing: '0 10px', // 增加行間距
+            borderCollapse: 'separate', 
+            borderSpacing: '0 10px', 
         },
         th: { 
-            border: 'none', // 移除邊框
+            border: 'none', 
             padding: '12px 15px', 
             textAlign: 'left', 
             backgroundColor: BG_SECONDARY, 
-            color: ACCENT_COLOR, // 使用強調色
+            color: ACCENT_COLOR, 
             fontSize: '15px',
             fontWeight: '600',
         },
         tr: {
-            backgroundColor: BG_PRIMARY, // 行的背景
-            borderRadius: '8px', // 行的圓角
+            backgroundColor: BG_PRIMARY, 
+            borderRadius: '8px', 
             boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
         },
         td: { 
-            border: 'none', // 移除邊框
+            border: 'none', 
             padding: '12px 15px',
             color: TEXT_COLOR,
             backgroundColor: BG_PRIMARY, 
@@ -205,7 +206,7 @@ const MasterItemManager = () => {
         },
         input: {
             padding: '8px 10px',
-            border: `1px solid ${BG_SECONDARY}`, // 柔和邊框
+            border: `1px solid ${BG_SECONDARY}`, 
             borderRadius: '6px', 
             backgroundColor: BG_SECONDARY,
             color: TEXT_COLOR,
@@ -230,7 +231,7 @@ const MasterItemManager = () => {
         },
         messageBox: (type) => ({
             padding: '15px',
-            borderRadius: '8px', // 圓角
+            borderRadius: '8px', 
             marginBottom: '20px',
             border: `1px solid ${type === 'error' ? ERROR_COLOR : SUCCESS_COLOR}`, 
             fontWeight: 'bold',

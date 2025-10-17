@@ -1,15 +1,16 @@
-// File: src/components/OrderFormWeb.jsx (已新增品項搜尋功能 - 現代簡潔風格)
+// File: src/components/OrderFormWeb.jsx (已修正 import useCallback)
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+// 請注意：此處已修正 import 語句，確保 useCallback 可用。
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'; 
 import { supabase } from '../supabase';
 
 // === 定義現代簡潔主題顏色 ===
-const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色
-const BG_PRIMARY = '#1C1C1C';      // 主背景色
-const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色
-const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
-const ERROR_COLOR = '#F44336';     // 錯誤色
-const SUCCESS_COLOR = '#4CAF50';   // 成功色
+const ACCENT_COLOR = '#6C63FF';    
+const BG_PRIMARY = '#1C1C1C';      
+const TEXT_COLOR = '#F0F0F0';      
+const BG_SECONDARY = '#2C2C2C';    
+const ERROR_COLOR = '#F44336';     
+const SUCCESS_COLOR = '#4CAF50';   
 
 const initialItem = { item_name: '', quantity: 1 };
 
@@ -44,7 +45,7 @@ const OrderFormWeb = () => {
         const { data, error } = await supabase
             .from('master_items')
             .select('item_name, item_price')
-            .eq('is_active', true) // 只抓取啟用品項
+            .eq('is_active', true) 
             .order('item_name', { ascending: true });
 
         if (error) {
@@ -124,7 +125,7 @@ const OrderFormWeb = () => {
         if (!searchTerm) return [];
         return masterItems.filter(item => 
             item.item_name.toLowerCase().includes(searchTerm.toLowerCase())
-        ).slice(0, 5); // 只顯示前 5 筆
+        ).slice(0, 5); 
     }, [masterItems, searchTerm]);
 
 
@@ -143,8 +144,8 @@ const OrderFormWeb = () => {
             customer_name: customerName,
             customer_phone: customerPhone,
             payment_status: paymentStatus,
-            pickup_time: pickupTime || null, // 允許為空
-            order_notes: orderNotes || null, // 允許為空
+            pickup_time: pickupTime || null, 
+            order_notes: orderNotes || null, 
             is_completed: false,
             created_at: new Date().toISOString(),
         };
@@ -167,7 +168,7 @@ const OrderFormWeb = () => {
             order_id: orderId,
             item_name: item.item_name,
             quantity: item.quantity,
-            item_price: itemPriceMap[item.item_name] || 0, // 寫死價格
+            item_price: itemPriceMap[item.item_name] || 0, 
         }));
 
         const { error: itemsError } = await supabase
@@ -195,10 +196,10 @@ const OrderFormWeb = () => {
     // 現代簡潔樣式
     const formStyle = {
         formContainer: {
-            backgroundColor: BG_SECONDARY, // 使用次級背景色作為卡片/表單背景
+            backgroundColor: BG_SECONDARY, 
             padding: '30px',
-            borderRadius: '10px', // 增加圓角
-            boxShadow: '0 4px 15px rgba(0,0,0,0.4)', // 柔和的陰影
+            borderRadius: '10px', 
+            boxShadow: '0 4px 15px rgba(0,0,0,0.4)', 
             maxWidth: '600px',
             margin: '0 auto',
         },
@@ -212,7 +213,7 @@ const OrderFormWeb = () => {
         },
         inputGroup: {
             marginBottom: '20px',
-            borderBottom: `1px solid #444`, // 柔和的分隔線
+            borderBottom: `1px solid #444`, 
             paddingBottom: '15px',
         },
         label: {
@@ -223,9 +224,9 @@ const OrderFormWeb = () => {
         },
         input: {
             padding: '12px',
-            border: 'none', // 移除邊框
-            borderRadius: '6px', // 圓角
-            backgroundColor: BG_PRIMARY, // 輸入框使用更深的背景
+            border: 'none', 
+            borderRadius: '6px', 
+            backgroundColor: BG_PRIMARY, 
             color: TEXT_COLOR,
             width: '100%',
             boxSizing: 'border-box',
@@ -243,7 +244,7 @@ const OrderFormWeb = () => {
             boxSizing: 'border-box',
             fontSize: '16px',
             marginTop: '8px',
-            appearance: 'none', // 移除原生箭頭
+            appearance: 'none', 
             backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(TEXT_COLOR)}' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E")`,
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'right 10px center',
@@ -272,15 +273,15 @@ const OrderFormWeb = () => {
             cursor: 'pointer',
             fontWeight: 'bold',
             transition: 'background-color 0.2s',
-            height: '42px', // 配合輸入框高度
+            height: '42px', 
             alignSelf: 'flex-end',
         },
         addButton: {
             backgroundColor: SUCCESS_COLOR,
-            color: 'white', // 修正為白色文字以提高對比
+            color: 'white', 
             border: 'none',
             padding: '12px 18px',
-            borderRadius: '8px', // 增加圓角
+            borderRadius: '8px', 
             cursor: 'pointer',
             width: '100%',
             marginTop: '15px',
@@ -291,21 +292,21 @@ const OrderFormWeb = () => {
             boxShadow: `0 2px 10px ${SUCCESS_COLOR}50`,
         },
         submitButton: {
-            backgroundColor: ACCENT_COLOR, // 使用新的強調色
-            color: 'white', // 確保文字清晰
+            backgroundColor: ACCENT_COLOR, 
+            color: 'white', 
             border: 'none',
             padding: '18px',
-            borderRadius: '10px', // 大圓角
+            borderRadius: '10px', 
             cursor: 'pointer',
             width: '100%',
             fontSize: '20px',
             fontWeight: 'bold',
-            boxShadow: `0 4px 20px ${ACCENT_COLOR}80`, // 較大的陰影效果
+            boxShadow: `0 4px 20px ${ACCENT_COLOR}80`, 
             transition: 'background-color 0.2s, box-shadow 0.2s, opacity 0.3s',
         },
         messageBox: (type) => ({
             padding: '15px',
-            borderRadius: '8px', // 圓角
+            borderRadius: '8px', 
             marginBottom: '20px',
             border: `1px solid ${type === 'error' ? ERROR_COLOR : SUCCESS_COLOR}`, 
             fontWeight: 'bold',
@@ -319,7 +320,7 @@ const OrderFormWeb = () => {
             right: 0,
             zIndex: 10,
             backgroundColor: BG_SECONDARY,
-            border: `1px solid ${ACCENT_COLOR}50`, // 柔和的邊框
+            border: `1px solid ${ACCENT_COLOR}50`, 
             borderRadius: '8px', 
             marginTop: '5px',
             maxHeight: '200px',
@@ -410,7 +411,7 @@ const OrderFormWeb = () => {
                                 value={item.item_name}
                                 onChange={(e) => handleItemChange(index, 'item_name', e.target.value)}
                                 onFocus={() => setShowSuggestionsIndex(index)}
-                                onBlur={() => setTimeout(() => setShowSuggestionsIndex(null), 200)} // 延遲關閉
+                                onBlur={() => setTimeout(() => setShowSuggestionsIndex(null), 200)} 
                                 onKeyDown={(e) => handleKeyDown(e, index)}
                                 style={formStyle.input}
                                 placeholder="品項名稱"
@@ -424,7 +425,7 @@ const OrderFormWeb = () => {
                                             key={sIndex}
                                             tabIndex={0}
                                             ref={el => suggestionRefs.current[sIndex] = el}
-                                            onMouseDown={() => handleSelectSuggestion(index, sItem.item_name)} // 用 mousedown 才能在 onBlur 觸發前點擊
+                                            onMouseDown={() => handleSelectSuggestion(index, sItem.item_name)} 
                                             onKeyDown={(e) => {
                                                 if (e.key === 'Enter') {
                                                     e.preventDefault();

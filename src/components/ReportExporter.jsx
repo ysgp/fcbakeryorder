@@ -1,17 +1,18 @@
-// File: src/components/ReportExporter.jsx (已升級為現代簡潔暗黑主題)
+// File: src/components/ReportExporter.jsx (已修正 import useCallback)
 
+// 請注意：此處已修正 import 語句，確保 useCallback 可用。
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase';
 import * as XLSX from 'xlsx'; 
 import { saveAs } from 'file-saver'; 
 
 // === 定義現代簡潔主題顏色 ===
-const ACCENT_COLOR = '#6C63FF';    // 現代藍紫色作為強調色 
-const BG_PRIMARY = '#1C1C1C';      // 主背景色
-const TEXT_COLOR = '#F0F0F0';      // 主要文字顏色
-const BG_SECONDARY = '#2C2C2C';    // 次級背景色/卡片背景
-const SUCCESS_COLOR = '#4CAF50';   // 成功色
-const ERROR_COLOR = '#F44336';     // 錯誤色
+const ACCENT_COLOR = '#6C63FF';    
+const BG_PRIMARY = '#1C1C1C';      
+const TEXT_COLOR = '#F0F0F0';      
+const BG_SECONDARY = '#2C2C2C';    
+const SUCCESS_COLOR = '#4CAF50';   
+const ERROR_COLOR = '#F44336';     
 
 // Excel 欄位限制：最多展開 5 個商品欄位
 const MAX_PRODUCTS_COLUMNS = 5; 
@@ -35,7 +36,7 @@ const tableStyle = {
     table: {
         width: '100%',
         borderCollapse: 'separate', 
-        borderSpacing: '0 10px', // 增加行間距
+        borderSpacing: '0 10px', 
         marginTop: '20px',
     },
     th: { 
@@ -91,10 +92,17 @@ const tableStyle = {
         padding: '10px',
         backgroundColor: BG_PRIMARY,
         borderRadius: '8px',
-    }
+    },
+    messageBox: (type) => ({
+        padding: '15px',
+        borderRadius: '8px', 
+        marginBottom: '20px',
+        border: `1px solid ${type === 'error' ? ERROR_COLOR : SUCCESS_COLOR}`, 
+        fontWeight: 'bold',
+        color: TEXT_COLOR,
+        backgroundColor: type === 'error' ? `${ERROR_COLOR}20` : `${SUCCESS_COLOR}20`,
+    }),
 };
-
-// ... (fetchOrders, handleExportSingleOrder, handleExportAll, handleCompleteOrder 函數保持不變)
 
 const ReportExporter = () => {
     const [orders, setOrders] = useState([]);
@@ -123,7 +131,6 @@ const ReportExporter = () => {
             query = query.gte('created_at', startDate);
         }
         if (endDate) {
-            // 結束日期應包含當天直到午夜
             const endOfDay = new Date(endDate);
             endOfDay.setDate(endOfDay.getDate() + 1);
             query = query.lt('created_at', endOfDay.toISOString());
