@@ -168,7 +168,7 @@ const ReportExporter = () => {
         const blob = new Blob([wbout], { type: 'application/octet-stream' });
         
         const statusText = filterCompleted ? '所有訂單' : '未結單訂單';
-        const filename = `鳳城麵包訂單_${statusText}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        const filename = `訂單_${statusText}_${new Date().toISOString().split('T')[0]}.xlsx`;
         // 修正成功訊息為中文
         saveAs(blob, filename);
         alert(`[導出] 成功導出 ${orders.length} 筆訂單到 ${filename}`);

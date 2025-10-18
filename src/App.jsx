@@ -65,7 +65,7 @@ function App() {
     return (
       <div style={{ padding: '10px', fontFamily: 'Roboto, sans-serif' }}>
         <h1 style={{ color: TECH_ACCENT, borderBottom: `2px solid ${TECH_ACCENT}`, paddingBottom: '10px', marginBottom: '15px', textAlign: 'center', fontSize: '22px' }}>
-            鳳城訂單管理系統 (大地版) - 請登入
+            永森訂單管理系統 (大地版) - 請登入
         </h1>
         <Auth />
       </div>
@@ -85,7 +85,7 @@ function App() {
       <div style={{ maxWidth: '100%', margin: '0 auto' }}> {/* 適應手機寬度 */}
         {/* 標題 */}
         <h1 style={{ color: TECH_ACCENT, borderBottom: `2px solid ${TECH_ACCENT}`, paddingBottom: '10px', marginBottom: '15px', textAlign: 'center', fontSize: '22px' }}>
-            鳳城訂單管理系統 (大地版)
+            永森訂單管理系統 (大地版)
         </h1>
         
         {/* 導航欄 - 包含品項管理與登出按鈕 */}
